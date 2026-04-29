@@ -1,0 +1,13 @@
+{
+  "name": "Cradle",
+  "short_name": "Cradle",
+  "description": "A gentle health & fitness diary for postpartum mums.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FBF7F2",
+  "theme_color": "#FBF7F2",
+  "orientation": "portrait",
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

@@ -1,0 +1,59 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+html, body, #root {
+  height: 100%;
+}
+
+body {
+  @apply bg-cream text-ink font-sans antialiased;
+  background-image:
+    radial-gradient(900px 500px at 100% -10%, rgba(217,166,161,0.18), transparent 60%),
+    radial-gradient(700px 400px at -10% 20%, rgba(143,164,135,0.15), transparent 60%);
+  background-attachment: fixed;
+}
+
+.font-display { font-family: 'Fraunces', ui-serif, Georgia, serif; }
+
+.card {
+  @apply bg-white/70 backdrop-blur rounded-3xl shadow-soft border border-white/60;
+}
+
+.chip {
+  @apply inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-sand text-plum;
+}
+
+.btn {
+  @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl font-medium transition active:scale-[.98];
+}
+.btn-primary { @apply btn bg-moss text-cream hover:bg-[#4f6249]; }
+.btn-soft   { @apply btn bg-sand text-plum hover:bg-[#ead9c5]; }
+.btn-ghost  { @apply btn text-plum hover:bg-sand/60; }
+
+.input {
+  @apply w-full bg-white/80 border border-sand rounded-2xl px-4 py-3 text-ink placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-sage/40;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: #E6DCCE; border-radius: 999px; }
+
+/* Mic pulse */
+@keyframes pulse-ring {
+  0% { box-shadow: 0 0 0 0 rgba(143,164,135,0.55); }
+  80% { box-shadow: 0 0 0 18px rgba(143,164,135,0); }
+  100% { box-shadow: 0 0 0 0 rgba(143,164,135,0); }
+}
+.recording { animation: pulse-ring 1.5s infinite; }
+
+/* Subtle entrance */
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.fade-up { animation: fade-up .35s ease-out both; }
