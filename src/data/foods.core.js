@@ -1,0 +1,77 @@
+// Core foods — proteins, grains, dairy, fats. Per 100g unless 'piece'.
+export const foodsCore = [
+  // PROTEINS — meat & poultry
+  { id: 'chicken_breast',  name: 'Chicken breast (cooked)', aliases: ['chicken','chicken breast','grilled chicken'], group:'protein', unit:'g', per:100, kcal:165, protein:31, carbs:0,  fat:3.6, fiber:0 },
+  { id: 'chicken_thigh',   name: 'Chicken thigh (cooked)',  aliases: ['chicken thigh'], group:'protein', unit:'g', per:100, kcal:209, protein:26, carbs:0,  fat:11,  fiber:0 },
+  { id: 'turkey_mince',    name: 'Turkey mince (cooked)',   aliases: ['turkey','ground turkey'], group:'protein', unit:'g', per:100, kcal:189, protein:27, carbs:0,  fat:8,   fiber:0 },
+  { id: 'beef_mince_lean', name: 'Lean beef mince (cooked)',aliases: ['beef mince','ground beef','mince'], group:'protein', unit:'g', per:100, kcal:217, protein:26, carbs:0,  fat:12,  fiber:0 },
+  { id: 'steak',           name: 'Beef steak (cooked)',     aliases: ['steak','sirloin','rump steak'], group:'protein', unit:'g', per:100, kcal:271, protein:29, carbs:0,  fat:17,  fiber:0 },
+  { id: 'lamb_chop',       name: 'Lamb chop (cooked)',      aliases: ['lamb','lamb chop'], group:'protein', unit:'g', per:100, kcal:294, protein:25, carbs:0,  fat:21,  fiber:0 },
+  { id: 'pork_loin',       name: 'Pork loin (cooked)',      aliases: ['pork','pork loin'], group:'protein', unit:'g', per:100, kcal:242, protein:27, carbs:0,  fat:14,  fiber:0 },
+  { id: 'bacon',           name: 'Bacon (cooked)',          aliases: ['bacon','streaky bacon'], group:'protein', unit:'g', per:100, kcal:541, protein:37, carbs:1.4,fat:42,  fiber:0 },
+  { id: 'ham',             name: 'Ham (sliced)',            aliases: ['ham','sliced ham'], group:'protein', unit:'g', per:100, kcal:145, protein:21, carbs:1.5,fat:6,   fiber:0 },
+  { id: 'sausage_pork',    name: 'Pork sausage (cooked)',   aliases: ['sausage','snag','snags'], group:'protein', unit:'piece', per:1, pieceGrams:60, kcal:170, protein:9,  carbs:1,  fat:14, fiber:0 },
+
+  // PROTEINS — fish & seafood
+  { id: 'salmon',          name: 'Salmon (cooked)',         aliases: ['salmon','grilled salmon','baked salmon'], group:'protein', unit:'g', per:100, kcal:208, protein:22, carbs:0,  fat:13,  fiber:0 },
+  { id: 'tuna_tin',        name: 'Tuna in springwater',     aliases: ['tuna','tinned tuna','canned tuna'], group:'protein', unit:'g', per:100, kcal:116, protein:26, carbs:0,  fat:1,   fiber:0 },
+  { id: 'sardines',        name: 'Sardines in oil',         aliases: ['sardines'], group:'protein', unit:'g', per:100, kcal:208, protein:25, carbs:0,  fat:11,  fiber:0 },
+  { id: 'prawns',          name: 'Prawns (cooked)',         aliases: ['prawns','shrimp'], group:'protein', unit:'g', per:100, kcal:99,  protein:24, carbs:0.2,fat:0.3, fiber:0 },
+  { id: 'cod',             name: 'Cod (cooked)',            aliases: ['cod'], group:'protein', unit:'g', per:100, kcal:105, protein:23, carbs:0,  fat:0.9, fiber:0 },
+  { id: 'snapper',         name: 'Snapper (cooked)',        aliases: ['snapper','white fish'], group:'protein', unit:'g', per:100, kcal:128, protein:26, carbs:0,  fat:1.7, fiber:0 },
+  { id: 'smoked_salmon',   name: 'Smoked salmon',           aliases: ['smoked salmon'], group:'protein', unit:'g', per:100, kcal:117, protein:18, carbs:0,  fat:4.3, fiber:0 },
+
+  // PROTEINS — eggs & plant
+  { id: 'egg',             name: 'Egg (large)',             aliases: ['egg','eggs'], group:'protein', unit:'piece', per:1, pieceGrams:50, kcal:72,  protein:6.3,carbs:0.4,fat:5,  fiber:0 },
+  { id: 'tofu_firm',       name: 'Firm tofu',               aliases: ['tofu','firm tofu'], group:'protein', unit:'g', per:100, kcal:144, protein:17, carbs:2.8,fat:8,   fiber:2.3 },
+  { id: 'tempeh',          name: 'Tempeh',                  aliases: ['tempeh'], group:'protein', unit:'g', per:100, kcal:192, protein:20, carbs:7.6,fat:11,  fiber:0 },
+
+  // GRAINS & STARCHES
+  { id: 'oats',            name: 'Rolled oats (dry)',       aliases: ['oats','porridge oats','rolled oats'], group:'grain', unit:'g', per:100, kcal:379, protein:13, carbs:67, fat:7,   fiber:10 },
+  { id: 'porridge',        name: 'Porridge (cooked, water)',aliases: ['porridge','oatmeal'], group:'grain', unit:'g', per:100, kcal:71,  protein:2.5,carbs:12, fat:1.5, fiber:1.7 },
+  { id: 'rice_brown',      name: 'Brown rice (cooked)',     aliases: ['brown rice'], group:'grain', unit:'g', per:100, kcal:123, protein:2.7,carbs:26, fat:0.9, fiber:1.8 },
+  { id: 'rice_white',      name: 'White rice (cooked)',     aliases: ['rice','white rice','jasmine rice','basmati'], group:'grain', unit:'g', per:100, kcal:130, protein:2.7,carbs:28, fat:0.3, fiber:0.4 },
+  { id: 'quinoa',          name: 'Quinoa (cooked)',         aliases: ['quinoa'], group:'grain', unit:'g', per:100, kcal:120, protein:4.4,carbs:21, fat:1.9, fiber:2.8 },
+  { id: 'pasta',           name: 'Pasta (cooked)',          aliases: ['pasta','spaghetti','penne','linguine'], group:'grain', unit:'g', per:100, kcal:158, protein:5.8,carbs:31, fat:0.9, fiber:1.8 },
+  { id: 'pasta_wholemeal', name: 'Wholemeal pasta (cooked)',aliases: ['wholemeal pasta','whole wheat pasta'], group:'grain', unit:'g', per:100, kcal:149, protein:6,  carbs:30, fat:1.4, fiber:4.5 },
+  { id: 'bread_sourdough', name: 'Sourdough bread',         aliases: ['sourdough','sourdough bread'], group:'grain', unit:'piece', per:1, pieceGrams:45, kcal:120, protein:4.5,carbs:23, fat:0.6, fiber:1.4 },
+  { id: 'bread_wholegrain',name: 'Wholegrain bread',        aliases: ['wholegrain bread','wholemeal bread','brown bread','toast'], group:'grain', unit:'piece', per:1, pieceGrams:40, kcal:100, protein:4,  carbs:17, fat:1.2, fiber:2.5 },
+  { id: 'bread_white',     name: 'White bread',             aliases: ['white bread'], group:'grain', unit:'piece', per:1, pieceGrams:36, kcal:96,  protein:3.2,carbs:18, fat:1,   fiber:0.8 },
+  { id: 'bagel',           name: 'Bagel',                   aliases: ['bagel'], group:'grain', unit:'piece', per:1, pieceGrams:95, kcal:245, protein:10, carbs:48, fat:1.5, fiber:2 },
+  { id: 'tortilla_wheat',  name: 'Flour tortilla',          aliases: ['tortilla','wrap','wholemeal wrap'], group:'grain', unit:'piece', per:1, pieceGrams:60, kcal:180, protein:5,  carbs:30, fat:4,   fiber:2 },
+  { id: 'potato',          name: 'Potato (boiled)',         aliases: ['potato','potatoes','boiled potato'], group:'veg', unit:'g', per:100, kcal:87,  protein:1.9,carbs:20, fat:0.1, fiber:1.8 },
+  { id: 'sweet_potato',    name: 'Sweet potato (baked)',    aliases: ['sweet potato','kumara'], group:'veg', unit:'g', per:100, kcal:90,  protein:2,  carbs:21, fat:0.2, fiber:3.3 },
+  { id: 'couscous',        name: 'Couscous (cooked)',       aliases: ['couscous'], group:'grain', unit:'g', per:100, kcal:112, protein:3.8,carbs:23, fat:0.2, fiber:1.4 },
+  { id: 'noodles_rice',    name: 'Rice noodles (cooked)',   aliases: ['rice noodles','vermicelli'], group:'grain', unit:'g', per:100, kcal:109, protein:2,  carbs:25, fat:0.2, fiber:1 },
+  { id: 'noodles_egg',     name: 'Egg noodles (cooked)',    aliases: ['egg noodles','noodles','hokkien'], group:'grain', unit:'g', per:100, kcal:138, protein:4.5,carbs:25, fat:2.1, fiber:1.2 },
+
+  // DAIRY
+  { id: 'milk_full',       name: 'Full-cream milk',         aliases: ['milk','full cream milk','whole milk'], group:'dairy', unit:'ml', per:100, kcal:64,  protein:3.3,carbs:4.7,fat:3.6, fiber:0 },
+  { id: 'milk_skim',       name: 'Skim milk',               aliases: ['skim milk','skinny milk','low fat milk'], group:'dairy', unit:'ml', per:100, kcal:36,  protein:3.5,carbs:5,  fat:0.2, fiber:0 },
+  { id: 'milk_oat',        name: 'Oat milk',                aliases: ['oat milk'], group:'dairy', unit:'ml', per:100, kcal:46,  protein:1,  carbs:6.6,fat:1.5, fiber:0.8 },
+  { id: 'milk_almond',     name: 'Almond milk (unsweet.)',  aliases: ['almond milk'], group:'dairy', unit:'ml', per:100, kcal:17,  protein:0.6,carbs:0.3,fat:1.5, fiber:0.4 },
+  { id: 'milk_soy',        name: 'Soy milk',                aliases: ['soy milk','soya milk'], group:'dairy', unit:'ml', per:100, kcal:43,  protein:3.3,carbs:1.8,fat:1.8, fiber:0.6 },
+  { id: 'yogurt_greek',    name: 'Greek yogurt (natural)',  aliases: ['greek yogurt','yogurt','yoghurt','greek yoghurt'], group:'dairy', unit:'g', per:100, kcal:97,  protein:9,  carbs:3.6,fat:5,   fiber:0 },
+  { id: 'yogurt_natural',  name: 'Natural yogurt',          aliases: ['natural yogurt','plain yogurt'], group:'dairy', unit:'g', per:100, kcal:61,  protein:3.5,carbs:4.7,fat:3.3, fiber:0 },
+  { id: 'cottage_cheese',  name: 'Cottage cheese',          aliases: ['cottage cheese'], group:'dairy', unit:'g', per:100, kcal:98,  protein:11, carbs:3.4,fat:4.3, fiber:0 },
+  { id: 'cheese_cheddar',  name: 'Cheddar cheese',          aliases: ['cheese','cheddar','tasty cheese'], group:'dairy', unit:'g', per:100, kcal:402, protein:25, carbs:1.3,fat:33,  fiber:0 },
+  { id: 'cheese_feta',     name: 'Feta cheese',             aliases: ['feta'], group:'dairy', unit:'g', per:100, kcal:264, protein:14, carbs:4.1,fat:21,  fiber:0 },
+  { id: 'cheese_haloumi',  name: 'Haloumi',                 aliases: ['haloumi','halloumi'], group:'dairy', unit:'g', per:100, kcal:316, protein:21, carbs:2,  fat:25,  fiber:0 },
+  { id: 'cheese_parmesan', name: 'Parmesan',                aliases: ['parmesan','parmigiano'], group:'dairy', unit:'g', per:100, kcal:431, protein:38, carbs:4.1,fat:29,  fiber:0 },
+  { id: 'butter',          name: 'Butter',                  aliases: ['butter'], group:'fat', unit:'g', per:100, kcal:717, protein:0.9,carbs:0.1,fat:81,  fiber:0 },
+
+  // FATS
+  { id: 'olive_oil',       name: 'Olive oil',               aliases: ['olive oil','evoo'], group:'fat', unit:'ml', per:100, kcal:884, protein:0,  carbs:0,  fat:100, fiber:0 },
+  { id: 'avocado',         name: 'Avocado',                 aliases: ['avocado','avo'], group:'fat', unit:'g', per:100, kcal:160, protein:2,  carbs:8.5,fat:15,  fiber:6.7 },
+  { id: 'almonds',         name: 'Almonds',                 aliases: ['almonds'], group:'fat', unit:'g', per:100, kcal:579, protein:21, carbs:22, fat:50,  fiber:12 },
+  { id: 'walnuts',         name: 'Walnuts',                 aliases: ['walnuts'], group:'fat', unit:'g', per:100, kcal:654, protein:15, carbs:14, fat:65,  fiber:6.7 },
+  { id: 'cashews',         name: 'Cashews',                 aliases: ['cashews'], group:'fat', unit:'g', per:100, kcal:553, protein:18, carbs:30, fat:44,  fiber:3.3 },
+  { id: 'peanut_butter',   name: 'Peanut butter',           aliases: ['peanut butter','pb'], group:'fat', unit:'g', per:100, kcal:588, protein:25, carbs:20, fat:50,  fiber:6 },
+  { id: 'almond_butter',   name: 'Almond butter',           aliases: ['almond butter'], group:'fat', unit:'g', per:100, kcal:614, protein:21, carbs:19, fat:56,  fiber:10 },
+  { id: 'tahini',          name: 'Tahini',                  aliases: ['tahini'], group:'fat', unit:'g', per:100, kcal:595, protein:17, carbs:21, fat:54,  fiber:9.3 },
+  { id: 'chia_seeds',      name: 'Chia seeds',              aliases: ['chia','chia seeds'], group:'fat', unit:'g', per:100, kcal:486, protein:17, carbs:42, fat:31,  fiber:34 },
+  { id: 'flax_seeds',      name: 'Flax seeds (ground)',     aliases: ['flax','flaxseed','linseed'], group:'fat', unit:'g', per:100, kcal:534, protein:18, carbs:29, fat:42,  fiber:27 },
+  { id: 'pumpkin_seeds',   name: 'Pumpkin seeds',           aliases: ['pumpkin seeds','pepitas'], group:'fat', unit:'g', per:100, kcal:559, protein:30, carbs:11, fat:49,  fiber:6 },
+  { id: 'sunflower_seeds', name: 'Sunflower seeds',         aliases: ['sunflower seeds'], group:'fat', unit:'g', per:100, kcal:584, protein:21, carbs:20, fat:51,  fiber:8.6 },
+  { id: 'coconut_oil',     name: 'Coconut oil',             aliases: ['coconut oil'], group:'fat', unit:'ml', per:100, kcal:862, protein:0,  carbs:0,  fat:100, fiber:0 },
+];
