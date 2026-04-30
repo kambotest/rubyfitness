@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import VoiceInput from './VoiceInput.jsx';
+import BrandFoodSearch from './BrandFoodSearch.jsx';
 import Ring from './Rings.jsx';
 import { FoodEntryList, ExerciseEntryList } from './EntryList.jsx';
 import UnknownItemFixer from './UnknownItemFixer.jsx';
@@ -89,6 +90,20 @@ export default function Dashboard({ state, setState }) {
   const removeEx = (id) =>
     setState((s) => ({ ...s, exerciseEntries: s.exerciseEntries.filter((e) => e.id !== id) }));
 
+  const logBrand = (entry) => {
+    const full = { id: newId(), date, ...entry, meal: entry.meal || currentMeal() };
+    setState((s) => ({ ...s, foodEntries: [...s.foodEntries, full] }));
+  };
+
+  const recentBrandIds = useMemo(() => {
+    const ids = [];
+    for (let i = state.foodEntries.length - 1; i >= 0 && ids.length < 8; i--) {
+      const id = state.foodEntries[i].brandFoodId;
+      if (id && !ids.includes(id)) ids.push(id);
+    }
+    return ids;
+  }, [state.foodEntries]);
+
   const remaining = Math.max(0, target - totals.kcal + burned);
   const fruitVegServes = countFruitVegServes(dayFood);
   const groups = countGroups(dayFood);
@@ -96,6 +111,12 @@ export default function Dashboard({ state, setState }) {
   return (
     <div className="space-y-5">
       <Header state={state} date={date} setDate={setDate} />
+
+      <BrandFoodSearch
+        onLogEntry={logBrand}
+        meal={currentMeal()}
+        recentIds={recentBrandIds}
+      />
 
       <VoiceInput onSubmit={submit} placeholder={
         mode === 'exercise'
@@ -182,14 +203,19 @@ function prettyDate(iso) {
   return d.toLocaleDateString(undefined, { weekday:'long', day:'numeric', month:'long' });
 }
 
+function entryGroup(e) {
+  if (e.group) return e.group;             // brand entries carry their group
+  const f = findFood(e.name);
+  return f ? f.group : null;
+}
+
 function countFruitVegServes(entries) {
   let s = 0;
   entries.forEach((e) => {
+    const g = entryGroup(e);
+    if (g !== 'fruit' && g !== 'veg') return;
     const f = findFood(e.name);
-    if (!f) return;
-    if (f.group !== 'fruit' && f.group !== 'veg') return;
-    // a "serve" ≈ 80g
-    const grams = e.unit === 'piece' && f.pieceGrams ? f.pieceGrams * e.amount : e.amount;
+    const grams = e.unit === 'piece' && f?.pieceGrams ? f.pieceGrams * e.amount : e.amount;
     s += grams / 80;
   });
   return Math.round(s * 10) / 10;
@@ -198,9 +224,9 @@ function countFruitVegServes(entries) {
 function countGroups(entries) {
   const groups = { protein:0, grain:0, veg:0, fruit:0, dairy:0, fat:0, legume:0, mixed:0, snack:0, beverage:0, condiment:0 };
   entries.forEach((e) => {
-    const f = findFood(e.name);
-    if (!f) return;
-    groups[f.group] = (groups[f.group] || 0) + e.kcal;
+    const g = entryGroup(e);
+    if (!g) return;
+    groups[g] = (groups[g] || 0) + e.kcal;
   });
   return groups;
 }
