@@ -23,7 +23,7 @@ const BarcodeSheet = lazy(() => import('./CameraSheet.jsx'));
 //   settings          — { proxyEndpoint, enableOFF }
 export default function BrandFoodSearch({
   onLogEntry, meal, recentIds = [], favouriteIds = [],
-  onToggleFav, brandUsage = {}, settings = {},
+  onToggleFav, brandUsage = {}, cachedBrands = {}, settings = {},
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -62,8 +62,8 @@ export default function BrandFoodSearch({
     return () => { cancelled = true; clearTimeout(handle); };
   }, [query, curatedResults.length, settings]);
 
-  const recents = useMemo(() => uniqueFoods(recentIds, 4), [recentIds]);
-  const favourites = useMemo(() => uniqueFoods(favouriteIds, 6), [favouriteIds]);
+  const recents = useMemo(() => uniqueFoods(recentIds, 4, cachedBrands), [recentIds, cachedBrands]);
+  const favourites = useMemo(() => uniqueFoods(favouriteIds, 6, cachedBrands), [favouriteIds, cachedBrands]);
 
   const browse = !query;
   const allResults = useMemo(() => {
@@ -226,11 +226,11 @@ export default function BrandFoodSearch({
   );
 }
 
-function uniqueFoods(ids, limit) {
+function uniqueFoods(ids, limit, cache) {
   const seen = new Set(); const out = [];
   for (const id of ids) {
     if (seen.has(id)) continue;
-    const f = findBrandFoodById(id);
+    const f = findBrandFoodById(id) || cache?.[id];   // curated first, then cached live items
     if (f) { out.push(f); seen.add(id); if (out.length >= limit) break; }
   }
   return out;

@@ -56,8 +56,10 @@ export default function ServingCalculator({
       sugars: macros.sugars, satFat: macros.satFat,
       meal,
       raw: `Brand search · ${displayAmount(amount, mode, food)}`,
-      // Pass usage so parent can persist:
+      // Pass usage + the full food object so parent can persist usage and
+      // cache live items (OFF / proxy) for offline + instant re-search.
       _usage: { lastAmount: Number(amount) || stepSize, lastMode: mode },
+      _food: food,
     });
   };
 
@@ -84,7 +86,7 @@ export default function ServingCalculator({
         <div className="flex flex-col items-end gap-1.5 shrink-0">
           <QABadge qa={food.qa} runtime={qa} source={food.source} />
           {onToggleFav && (
-            <button onClick={() => onToggleFav(food.id)}
+            <button onClick={() => onToggleFav(food.id, food)}
               aria-label={isFavourite ? 'Remove from favourites' : 'Add to favourites'}
               className={`text-lg leading-none w-7 h-7 rounded-full flex items-center justify-center transition ${
                 isFavourite ? 'bg-rose/15 text-rose' : 'bg-white/70 text-muted hover:text-rose'

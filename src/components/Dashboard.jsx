@@ -8,6 +8,7 @@ import {
   parseFoodTranscript, parseExerciseTranscript, classifyTranscript,
 } from '../utils/parser.js';
 import { findFood, nutrientsFor } from '../data/foods.js';
+import { findBrandFoodById } from '../utils/brandFoods.js';
 import { todayISO, newId, dailyCalorieTarget, macroTargets } from '../utils/storage.js';
 
 function currentMeal() {
@@ -100,7 +101,7 @@ export default function Dashboard({ state, setState }) {
     setState((s) => ({ ...s, exerciseEntries: s.exerciseEntries.filter((e) => e.id !== id) }));
 
   const logBrand = (entry) => {
-    const { _usage, ...rest } = entry;
+    const { _usage, _food, ...rest } = entry;
     const full = { id: newId(), date, ...rest, meal: rest.meal || currentMeal() };
     setState((s) => {
       const usage = { ...(s.brandUsage || {}) };
@@ -112,15 +113,23 @@ export default function Dashboard({ state, setState }) {
           lastDate: todayISO(),
         };
       }
-      return { ...s, foodEntries: [...s.foodEntries, full], brandUsage: usage };
+      // Cache live (non-curated) brand foods so future searches resolve
+      // instantly and the item works offline.
+      const cache = { ...(s.cachedBrands || {}) };
+      if (_food && rest.brandFoodId && !findBrandFoodById(rest.brandFoodId)) {
+        cache[rest.brandFoodId] = _food;
+      }
+      return { ...s, foodEntries: [...s.foodEntries, full], brandUsage: usage, cachedBrands: cache };
     });
   };
 
-  const toggleFavourite = (id) => {
+  const toggleFavourite = (id, food) => {
     setState((s) => {
       const cur = s.favouriteBrands || [];
       const next = cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id];
-      return { ...s, favouriteBrands: next };
+      const cache = { ...(s.cachedBrands || {}) };
+      if (food && !findBrandFoodById(id) && !cache[id]) cache[id] = food;
+      return { ...s, favouriteBrands: next, cachedBrands: cache };
     });
   };
 
@@ -148,6 +157,7 @@ export default function Dashboard({ state, setState }) {
         favouriteIds={state.favouriteBrands || []}
         onToggleFav={toggleFavourite}
         brandUsage={state.brandUsage || {}}
+        cachedBrands={state.cachedBrands || {}}
         settings={state.settings || {}}
       />
 

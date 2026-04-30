@@ -27,6 +27,9 @@ const empty = () => ({
   recipes: [],                // [{id,name,servings,items,perServe:{kcal,protein,carbs,fat,fiber}}]
   favouriteBrands: [],        // [brandFoodId, ...]
   brandUsage: {},             // { [brandFoodId]: {lastAmount, lastMode, count, lastDate} }
+  cachedBrands: {},           // { [brandFoodId]: <full brand-food object> } — live results
+                              // (Open Food Facts / proxy) the user starred or logged, so they
+                              // resolve instantly + offline next time without re-fetching.
   settings: {
     proxyEndpoint: '',         // optional Woolworths/manufacturer lookup proxy
     enableOFF: true,           // fall back to Open Food Facts
@@ -47,6 +50,7 @@ export function load() {
       settings: { ...base.settings, ...(parsed.settings || {}) },
       favouriteBrands: parsed.favouriteBrands || [],
       brandUsage: parsed.brandUsage || {},
+      cachedBrands: parsed.cachedBrands || {},
     };
   } catch {
     return empty();
