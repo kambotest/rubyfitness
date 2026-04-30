@@ -4,6 +4,7 @@ import BrandFoodSearch from './BrandFoodSearch.jsx';
 import Ring from './Rings.jsx';
 import { FoodEntryList, ExerciseEntryList } from './EntryList.jsx';
 import UnknownItemFixer from './UnknownItemFixer.jsx';
+import EntryEditor from './EntryEditor.jsx';
 import {
   parseFoodTranscript, parseExerciseTranscript, classifyTranscript,
 } from '../utils/parser.js';
@@ -24,6 +25,7 @@ export default function Dashboard({ state, setState }) {
   const [pending, setPending] = useState([]);    // unresolved unknown items
   const [mode, setMode] = useState('auto');      // 'auto'|'food'|'exercise'
   const [date, setDate] = useState(todayISO());
+  const [editingEntry, setEditingEntry] = useState(null);
 
   const dayFood = useMemo(
     () => state.foodEntries.filter((e) => e.date === date),
@@ -99,6 +101,14 @@ export default function Dashboard({ state, setState }) {
     setState((s) => ({ ...s, foodEntries: s.foodEntries.filter((e) => e.id !== id) }));
   const removeEx = (id) =>
     setState((s) => ({ ...s, exerciseEntries: s.exerciseEntries.filter((e) => e.id !== id) }));
+
+  const updateFood = (updated) => {
+    setState((s) => ({
+      ...s,
+      foodEntries: s.foodEntries.map((e) => (e.id === updated.id ? updated : e)),
+    }));
+    setEditingEntry(null);
+  };
 
   const logBrand = (entry) => {
     const { _usage, _food, ...rest } = entry;
@@ -222,13 +232,23 @@ export default function Dashboard({ state, setState }) {
       <section className="grid sm:grid-cols-2 gap-5">
         <div className="card p-5">
           <h3 className="font-display text-lg mb-2">Eaten</h3>
-          <FoodEntryList entries={dayFood} onDelete={removeFood} />
+          <FoodEntryList entries={dayFood} onDelete={removeFood} onEdit={setEditingEntry} />
         </div>
         <div className="card p-5">
           <h3 className="font-display text-lg mb-2">Movement</h3>
           <ExerciseEntryList entries={dayEx} onDelete={removeEx} />
         </div>
       </section>
+
+      {editingEntry && (
+        <EntryEditor
+          entry={editingEntry}
+          cachedBrands={state.cachedBrands || {}}
+          onSave={updateFood}
+          onDelete={() => { removeFood(editingEntry.id); setEditingEntry(null); }}
+          onClose={() => setEditingEntry(null)}
+        />
+      )}
     </div>
   );
 }

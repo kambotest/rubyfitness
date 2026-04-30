@@ -30,6 +30,14 @@ const empty = () => ({
   cachedBrands: {},           // { [brandFoodId]: <full brand-food object> } — live results
                               // (Open Food Facts / proxy) the user starred or logged, so they
                               // resolve instantly + offline next time without re-fetching.
+  dailyGoals: [               // Editable daily checklist shown on the Goals tab.
+    { id: 'goal_screenfree', label: '30 min screen-free leisure time' },
+    { id: 'goal_clean',      label: '30 min deep clean' },
+    { id: 'goal_creatine',   label: 'Take creatine' },
+    { id: 'goal_instagram',  label: '1 post on my Instagram pages' },
+    { id: 'goal_meditation', label: '2 minutes meditation' },
+  ],
+  dailyChecks: {},            // { [iso-date]: { [goalId]: bool } }
   settings: {
     proxyEndpoint: '',         // optional Woolworths/manufacturer lookup proxy
     enableOFF: true,           // fall back to Open Food Facts
@@ -51,6 +59,8 @@ export function load() {
       favouriteBrands: parsed.favouriteBrands || [],
       brandUsage: parsed.brandUsage || {},
       cachedBrands: parsed.cachedBrands || {},
+      dailyGoals: parsed.dailyGoals && parsed.dailyGoals.length ? parsed.dailyGoals : base.dailyGoals,
+      dailyChecks: parsed.dailyChecks || {},
     };
   } catch {
     return empty();
