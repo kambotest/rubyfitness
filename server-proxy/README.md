@@ -1,6 +1,6 @@
-# Cradle brand-food lookup proxy
+# Built Different 🤍 — brand-food lookup proxy
 
-The Cradle PWA can talk to an optional **server proxy** that fetches
+The Built Different PWA can talk to an optional **server proxy** that fetches
 nutrition data from Woolworths and manufacturer websites and (optionally)
 runs OCR on photographed cookbook pages. When deployed and configured in
 Settings → Brand-food lookup, it slots in as the second tier of the
@@ -20,7 +20,7 @@ lookup chain:
 | GET    | `/search?q=...`       | Text search top-up when curated returns < 3 hits |
 | POST   | `/ocr` (multipart `image`) | Cookbook photo OCR (Recipes tab) — optional |
 
-All responses must be JSON. CORS must allow the origin where Cradle is
+All responses must be JSON. CORS must allow the origin where Built Different is
 hosted (`Access-Control-Allow-Origin: https://your.app` or `*` for dev).
 
 ### Response shapes
@@ -89,7 +89,7 @@ npm install
 node dev-server.js     # serves on http://localhost:8787
 ```
 
-Then in the Cradle app, open Settings → Brand-food lookup and set:
+Then in the Built Different app, open Settings → Brand-food lookup and set:
 
 ```
 Server proxy URL: http://localhost:8787

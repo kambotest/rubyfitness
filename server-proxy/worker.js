@@ -1,4 +1,4 @@
-// Cloudflare Worker reference for Cradle's brand-food proxy.
+// Cloudflare Worker reference for Built Different's brand-food proxy.
 //
 // Endpoints:
 //   GET  /lookup?barcode=<gtin>
@@ -12,8 +12,8 @@
 //   wrangler secret put GOOGLE_VISION_KEY     # for /ocr
 //   wrangler deploy
 //
-// CORS is open by default — tighten to your hosted Cradle origin in
-// production by editing CORS_ALLOW_ORIGIN below.
+// CORS is open by default — tighten to your hosted Built Different
+// origin in production by editing CORS_ALLOW_ORIGIN below.
 
 const CORS_ALLOW_ORIGIN = '*';
 const CORS = {
@@ -22,7 +22,7 @@ const CORS = {
   'Access-Control-Allow-Headers': 'Content-Type, Accept',
 };
 
-const UA = 'CradleProxy/1.0 (+https://github.com/your/cradle)';
+const UA = 'BuiltDifferentProxy/1.0';
 
 export default {
   async fetch(request, env, ctx) {
@@ -58,14 +58,14 @@ async function lookupBarcode(barcode, env, ctx) {
   if (!barcode) return { found: false };
 
   const cacheKey = `barcode:${barcode}`;
-  const cached = await env.CRADLE_KV?.get(cacheKey, 'json');
+  const cached = await env.CACHE_KV?.get(cacheKey, 'json');
   if (cached) return cached;
 
   // Woolworths public search-by-keyword often returns the GTIN as a hit.
   const w = await tryWoolworthsByBarcode(barcode);
   if (w) {
     const out = { found: true, source: 'woolworths', food: w };
-    ctx.waitUntil(env.CRADLE_KV?.put(cacheKey, JSON.stringify(out), { expirationTtl: 86400 }));
+    ctx.waitUntil(env.CACHE_KV?.put(cacheKey, JSON.stringify(out), { expirationTtl: 86400 }));
     return out;
   }
 

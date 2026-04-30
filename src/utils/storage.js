@@ -1,4 +1,6 @@
 // Lightweight localStorage store. Single JSON blob keyed by date for entries.
+// Storage key is intentionally retained as the original 'cradle:v1' so that
+// existing user data survives the rebrand to "Built Different 🤍".
 const KEY = 'cradle:v1';
 
 const empty = () => ({

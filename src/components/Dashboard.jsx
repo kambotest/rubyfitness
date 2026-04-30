@@ -285,7 +285,7 @@ function Header({ state, date, setDate }) {
   return (
     <div className="flex items-end justify-between gap-4">
       <div>
-        <p className="text-xs uppercase tracking-widest text-muted">{prettyDate(date)}</p>
+        <p className="text-xs uppercase tracking-widest text-muted">Built Different 🤍</p>
         <h1 className="font-display text-3xl sm:text-4xl text-ink leading-tight">
           {state.profile.name || 'Today'}
         </h1>

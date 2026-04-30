@@ -35,7 +35,7 @@ export default function Settings({ state, setState }) {
     const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = `cradle-export-${todayISO()}.json`;
+    a.download = `built-different-export-${todayISO()}.json`;
     a.click();
   };
 

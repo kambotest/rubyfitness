@@ -1,9 +1,9 @@
 {
-  "name": "cradle",
+  "name": "built-different",
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "A gentle health & fitness diary for postpartum mums — voice-first, one-handed, beautiful.",
+  "description": "Built Different — health and fitness diary.",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
