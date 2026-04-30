@@ -38,6 +38,10 @@ const empty = () => ({
     { id: 'goal_meditation', label: '2 minutes meditation' },
   ],
   dailyChecks: {},            // { [iso-date]: { [goalId]: bool } }
+  goalTimers: {},             // { [goalId]: { startedAt: ms, durationSec, date } } —
+                              // active countdowns. Wall-clock based so they keep
+                              // running while the app is closed; auto-tick the goal
+                              // on expiry.
   settings: {
     proxyEndpoint: '',         // optional Woolworths/manufacturer lookup proxy
     enableOFF: true,           // fall back to Open Food Facts
@@ -61,6 +65,7 @@ export function load() {
       cachedBrands: parsed.cachedBrands || {},
       dailyGoals: parsed.dailyGoals && parsed.dailyGoals.length ? parsed.dailyGoals : base.dailyGoals,
       dailyChecks: parsed.dailyChecks || {},
+      goalTimers: parsed.goalTimers || {},
     };
   } catch {
     return empty();
