@@ -54,6 +54,70 @@ export function findBrandFoodById(id) {
   return BRAND_FOODS.find((f) => f.id === id) || null;
 }
 
+// ---- Serving inference for voice/text input ----
+// Reads the serving label (e.g. "2 biscuits (30 g)", "1 tub (170 g)") and
+// extracts the unit hint and how many of those units make one declared
+// serving. Lets the parser interpret "two weet-bix" as 2 biscuits (= 1
+// serving = 30 g) rather than 2 servings.
+const UNIT_WORDS = ['biscuit','biscuits','bar','bars','ball','balls','slice','slices','wrap','wraps','cracker','crackers','piece','pieces','cookie','cookies','tub','tubs','cup','cups','stick','sticks','egg','eggs','pouch','pouches','carton','cartons','can','cans','bottle','bottles','glass','glasses','bag','bags','sachet','sachets'];
+const UNIT_RE = new RegExp(`^\\s*(\\d+(?:\\.\\d+)?)\\s+(${UNIT_WORDS.join('|')})\\b`, 'i');
+const ALL_UNITS_RE = new RegExp(`\\b(${UNIT_WORDS.join('|')})\\b`, 'i');
+
+export function servingHint(food) {
+  if (!food?.serving?.label) return null;
+  const m = food.serving.label.match(UNIT_RE);
+  if (m) return { unitsPerServing: parseFloat(m[1]), unit: m[2].toLowerCase().replace(/s$/,'') };
+  // "1 tub (170 g)" without leading digit pattern (rare). Try second pass.
+  const m2 = food.serving.label.match(ALL_UNITS_RE);
+  if (m2) return { unitsPerServing: 1, unit: m2[1].toLowerCase().replace(/s$/,'') };
+  return null;
+}
+
+// Translate a count + caller-provided unit into grams of this brand food.
+// Used by the voice parser. Returns null if the request can't be honoured
+// (e.g. user asked for kg of an item we only know per-serve).
+//
+// count   — numeric quantity ("two", "1.5", "100")
+// unit    — 'g'|'ml'|'serving'|'piece'|<unit-word like 'biscuit'>|null
+//   * If unit matches the food's serving-label unit word ('biscuit',
+//     'tub', etc.) we treat count as that-many-of-that-thing and divide
+//     by units-per-serving to land in grams.
+//   * If unit is 'g'/'ml' we use it directly.
+//   * If null, 'serving', or 'piece', we treat count as servings.
+export function inferGramsFromVoice(food, count, unit) {
+  if (!food || !Number.isFinite(count) || count <= 0) return null;
+  const u = (unit || '').toLowerCase().replace(/s$/,'');
+  if (u === 'g' || u === 'ml') return count;
+  if (u === 'kg') return count * 1000;
+  if (u === 'l')  return count * 1000;
+
+  const hint = servingHint(food);
+  // bare unit word like "biscuit" matches the serving's hint?
+  if (hint && u && (u === hint.unit || isSameUnit(u, hint.unit))) {
+    return (count / Math.max(1, hint.unitsPerServing)) * food.serving.size;
+  }
+  // "two weet-bix" with no unit word: if the food's serving is itself a
+  // multi-piece (e.g. 2 biscuits per serve), assume the user means
+  // count-of-the-piece, not count-of-servings.
+  if (!u && hint && hint.unitsPerServing > 1) {
+    return (count / hint.unitsPerServing) * food.serving.size;
+  }
+  // default: count = servings
+  return count * food.serving.size;
+}
+
+function isSameUnit(a, b) {
+  if (a === b) return true;
+  // common synonyms
+  const synSets = [
+    ['biscuit','cookie'],
+    ['piece','slice','wrap','cracker'],
+    ['tub','pouch','carton','cup'],
+    ['bottle','can','glass'],
+  ];
+  return synSets.some((g) => g.includes(a) && g.includes(b));
+}
+
 // ---- Serving calculator ----
 // Returns macros for a given amount of a brand food.
 // mode: 'g' | 'ml' | 'serving' | 'package'

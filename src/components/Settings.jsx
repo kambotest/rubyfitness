@@ -1,18 +1,35 @@
 import { useState } from 'react';
-import { dailyCalorieTarget, todayISO, newId } from '../utils/storage.js';
+import {
+  bmr, tdee, lactationKcal, weightLossDeficit, dailyCalorieTarget,
+  macroTargets, todayISO,
+} from '../utils/storage.js';
 
 export default function Settings({ state, setState }) {
   const [draft, setDraft] = useState({
-    profile: { ...state.profile },
-    goals: { ...state.goals },
+    profile:  { ...state.profile },
+    goals:    { ...state.goals },
+    settings: { ...state.settings },
   });
 
-  const target = dailyCalorieTarget(draft.profile, draft.goals);
+  const energy = {
+    bmr: bmr(draft.profile),
+    tdee: tdee(draft.profile),
+    lactation: lactationKcal(draft.profile),
+    deficit: weightLossDeficit(draft.profile, draft.goals),
+    target: dailyCalorieTarget(draft.profile, draft.goals),
+  };
+  const macros = macroTargets(draft.profile, draft.goals);
 
-  const saveProfile = () => setState({ ...state, profile: { ...draft.profile }, goals: { ...draft.goals } });
+  const save = () => setState({
+    ...state,
+    profile:  { ...draft.profile },
+    goals:    { ...draft.goals },
+    settings: { ...draft.settings },
+  });
 
-  const setP = (k,v) => setDraft({ ...draft, profile: { ...draft.profile, [k]: v } });
-  const setG = (k,v) => setDraft({ ...draft, goals: { ...draft.goals, [k]: v } });
+  const setP = (k, v) => setDraft({ ...draft, profile:  { ...draft.profile,  [k]: v } });
+  const setG = (k, v) => setDraft({ ...draft, goals:    { ...draft.goals,    [k]: v } });
+  const setS = (k, v) => setDraft({ ...draft, settings: { ...draft.settings, [k]: v } });
 
   const exportData = () => {
     const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
@@ -67,38 +84,105 @@ export default function Settings({ state, setState }) {
       </section>
 
       <section className="card p-5 space-y-3">
-        <h2 className="font-display text-lg">Goals</h2>
+        <h2 className="font-display text-lg">Energy & weight loss</h2>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <EnergyCell label="BMR (Mifflin-St Jeor)" value={energy.bmr} sub="kcal at rest"/>
+          <EnergyCell label="TDEE (BMR × activity)" value={energy.tdee} sub="kcal/day"/>
+          <EnergyCell label="Lactation extra" value={energy.lactation} sub={energy.lactation ? 'kcal added' : 'not feeding'}/>
+          <EnergyCell label="Weight-loss deficit" value={`-${energy.deficit}`} sub="kcal/day"/>
+        </div>
+        <div className="text-sm text-plum bg-sand/50 rounded-2xl px-4 py-3">
+          Daily calorie target: <span className="font-display text-xl">{energy.target}</span> kcal
+          <span className="text-muted text-xs"> &nbsp;= TDEE {energy.tdee} {energy.lactation ? `+ ${energy.lactation}` : ''} − {energy.deficit} (safety floor applied)</span>
+        </div>
+
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           <Field label="Goal weight (kg)">
             <input type="number" step="0.1" value={draft.goals.weightKg} onChange={(e)=>setG('weightKg', +e.target.value)} className="input"/>
           </Field>
-          <Field label="Weekly running (km)">
-            <input type="number" value={draft.goals.weeklyKm} onChange={(e)=>setG('weeklyKm', +e.target.value)} className="input"/>
+          <Field label="Weight loss rate (kg/week)">
+            <select value={draft.goals.weightLossKgPerWeek} onChange={(e)=>setG('weightLossKgPerWeek', +e.target.value)} className="input">
+              <option value={0}>Maintain (no deficit)</option>
+              <option value={0.25}>Gentle — 0.25 kg/week</option>
+              <option value={0.35}>Moderate — 0.35 kg/week</option>
+              <option value={0.5}>Faster — 0.5 kg/week</option>
+            </select>
           </Field>
-          <Field label="Protein target (g/day)">
-            <input type="number" value={draft.goals.proteinG} onChange={(e)=>setG('proteinG', +e.target.value)} className="input"/>
+          <Field label="Macro strategy">
+            <select value={draft.goals.macroStrategy} onChange={(e)=>setG('macroStrategy', e.target.value)} className="input">
+              <option value="hba1c">HbA1c-stable (higher protein, lower carb)</option>
+              <option value="balanced">Balanced (Aus dietary guidelines)</option>
+            </select>
           </Field>
+        </div>
+        <p className="text-[11px] text-muted">
+          The HbA1c-stable strategy biases toward protein (~1.8 g/kg) and caps carbs at 45% of energy — supported by evidence on
+          lower-glycaemic-load patterns for blood-glucose stability. The balanced strategy follows the standard 20/50/30 split.
+        </p>
+      </section>
+
+      <section className="card p-5 space-y-3">
+        <h2 className="font-display text-lg">Daily targets</h2>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <EnergyCell label="Calories" value={macros.kcal} sub="kcal/day"/>
+          <EnergyCell label="Protein" value={`${macros.protein}g`} sub={`${pct(macros.protein*4, macros.kcal)}% kcal`}/>
+          <EnergyCell label="Carbs" value={`${macros.carbs}g`} sub={`${pct(macros.carbs*4, macros.kcal)}% kcal`}/>
+          <EnergyCell label="Fat" value={`${macros.fat}g`} sub={`${pct(macros.fat*9, macros.kcal)}% kcal`}/>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           <Field label="Fibre target (g/day)">
             <input type="number" value={draft.goals.fiberG} onChange={(e)=>setG('fiberG', +e.target.value)} className="input"/>
+          </Field>
+          <Field label="Sugar cap (g/day)">
+            <input type="number" value={draft.goals.sugarG} onChange={(e)=>setG('sugarG', +e.target.value)} className="input"/>
           </Field>
           <Field label="Fruit + Veg serves/day">
             <input type="number" value={draft.goals.fruitVegServes} onChange={(e)=>setG('fruitVegServes', +e.target.value)} className="input"/>
           </Field>
-          <Field label="Target date">
-            <input type="date" value={draft.goals.targetDate || ''} onChange={(e)=>setG('targetDate', e.target.value)} className="input"/>
-          </Field>
         </div>
-        <div className="text-sm text-plum bg-sand/50 rounded-2xl px-4 py-3">
-          Estimated daily calorie target: <span className="font-display text-lg">{target}</span> kcal
-          <span className="text-muted text-xs"> &nbsp;(based on weight {draft.profile.weightKg}kg, height {draft.profile.heightCm}cm, age {draft.profile.age}, activity & breastfeeding)</span>
-        </div>
+        <p className="text-[11px] text-muted">
+          Sugar cap defaults to 25 g (American Heart Association recommendation for women, also aligned with WHO &lt;10% energy
+          for added sugars). Lower caps (≤20 g) are appropriate when targeting HbA1c reduction.
+        </p>
+      </section>
+
+      <section className="card p-5 space-y-3">
+        <h2 className="font-display text-lg">Brand-food lookup</h2>
+        <Field label="Server proxy URL (optional)">
+          <input value={draft.settings.proxyEndpoint || ''}
+            onChange={(e)=>setS('proxyEndpoint', e.target.value)}
+            placeholder="https://your-worker.example.workers.dev"
+            className="input" type="url"/>
+        </Field>
+        <p className="text-[11px] text-muted">
+          When set, brand searches and barcode scans first try your proxy (which scrapes Woolworths / manufacturer NIPs)
+          before falling back to Open Food Facts. See <code className="text-[10px]">/server-proxy/README.md</code> in the
+          repo for a Cloudflare Worker reference.
+        </p>
+        <Field label="Open Food Facts fallback">
+          <select value={draft.settings.enableOFF ? 'y' : 'n'}
+            onChange={(e)=>setS('enableOFF', e.target.value === 'y')} className="input">
+            <option value="y">Enabled (used only if curated + proxy miss)</option>
+            <option value="n">Disabled</option>
+          </select>
+        </Field>
       </section>
 
       <div className="flex flex-wrap gap-2 justify-end">
         <button onClick={exportData} className="btn-ghost">Export data</button>
         <button onClick={clearAll} className="btn-ghost text-rose">Reset entries</button>
-        <button onClick={saveProfile} className="btn-primary">Save</button>
+        <button onClick={save} className="btn-primary">Save</button>
       </div>
+    </div>
+  );
+}
+
+function EnergyCell({ label, value, sub }) {
+  return (
+    <div className="rounded-xl bg-white/80 border border-sand px-3 py-2">
+      <div className="text-[10px] uppercase tracking-wide text-muted">{label}</div>
+      <div className="font-display text-xl text-ink">{value}</div>
+      {sub && <div className="text-[10px] text-muted">{sub}</div>}
     </div>
   );
 }
@@ -110,4 +194,9 @@ function Field({ label, children }) {
       {children}
     </label>
   );
+}
+
+function pct(part, whole) {
+  if (!whole) return 0;
+  return Math.round((part / whole) * 100);
 }

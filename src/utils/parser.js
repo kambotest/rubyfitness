@@ -1,6 +1,32 @@
 // Parses free-text / voice transcripts into structured food or exercise entries.
-import { FOODS, findFood, nutrientsFor } from '../data/foods.js';
+import { FOODS, findFood, nutrientsFor, estimateSugars } from '../data/foods.js';
 import { EXERCISES, findExercise, kcalBurned } from '../data/exercises.js';
+import { BRAND_FOODS, searchBrandFoods, inferGramsFromVoice, calcMacros } from './brandFoods.js';
+
+// Brand aliases that contain " and " or " & " — these get collapsed to a
+// single token before the conjunction-based splitter runs, otherwise
+// "250ml up and go" would split into "250ml up" and "go".
+const PROTECTED_PHRASES = (() => {
+  const set = new Set();
+  for (const f of BRAND_FOODS) {
+    for (const a of (f.aliases || [])) {
+      const lc = a.toLowerCase();
+      if (/\s(and|&)\s/.test(lc) || /[&]/.test(lc)) set.add(lc);
+    }
+  }
+  return [...set];
+})();
+function protectBrandPhrases(t) {
+  let out = ' ' + t + ' ';
+  for (const p of PROTECTED_PHRASES) {
+    // Collapse spaces but keep "and" — alias 'up and go' becomes 'upandgo',
+    // which matches the dataset's no-space alias variant.
+    const protectedToken = p.replace(/\s*&\s*/g, 'and').replace(/\s+/g, '');
+    const re = new RegExp('\\s' + p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s', 'gi');
+    out = out.replace(re, ' ' + protectedToken + ' ');
+  }
+  return out.trim();
+}
 
 const NUM_WORDS = {
   a:1, an:1, one:1, two:2, three:3, four:4, five:5, six:6, seven:7,
@@ -88,6 +114,9 @@ function gramsForLooseUnit(food, unit, count) {
 export function splitItems(text) {
   if (!text) return [];
   let t = ` ${text.toLowerCase().trim()} `;
+  // Protect known brand phrases that contain "and" so the splitter doesn't
+  // chop "up and go" into "up" + "go".
+  t = ' ' + protectBrandPhrases(t.trim()) + ' ';
   // Map digits with fractions like "1/2"
   t = t.replace(/(\d+)\s*\/\s*2/g, (_, n) => ` ${parseInt(n)/2} `);
   t = t.replace(/(\d+)\s*\/\s*4/g, (_, n) => ` ${parseInt(n)/4} `);
@@ -131,6 +160,32 @@ export function parseFoodItem(raw) {
   const foodPhrase = tokens.slice(i).join(' ').replace(/^of\s+/, '').trim();
   if (!foodPhrase) return null;
 
+  // ---- Brand-aware path ----
+  // Try the brand database first. If the top match is strong (the query
+  // contains the brand name or a multi-word product alias), interpret the
+  // quantity using the serving label and return a brand entry.
+  const brandHit = matchBrandFood(foodPhrase);
+  if (brandHit) {
+    const grams = inferGramsFromVoice(brandHit, count, unit);
+    if (grams && grams > 0) {
+      const m = calcMacros(brandHit, grams, brandHit.serving.unit);
+      const label = brandHit.variant
+        ? `${brandHit.brand} ${brandHit.name} (${brandHit.variant})`
+        : `${brandHit.brand} ${brandHit.name}`;
+      return {
+        foodId: brandHit.id,
+        brandFoodId: brandHit.id,
+        group: brandHit.group,
+        name: label,
+        amount: Math.round(grams * 10) / 10,
+        unit: brandHit.serving.unit,
+        kcal: m.kcal, protein: m.protein, carbs: m.carbs, fat: m.fat,
+        fiber: m.fiber, sugars: m.sugars, satFat: m.satFat, sodium: m.sodium,
+        raw,
+      };
+    }
+  }
+
   const food = findFood(foodPhrase);
   if (!food) return { unknown: true, query: foodPhrase, raw };
 
@@ -172,6 +227,49 @@ export function parseFoodItem(raw) {
 export function parseFoodTranscript(text) {
   const items = splitItems(text).map(parseFoodItem).filter(Boolean);
   return items;
+}
+
+// Brand match returns a brand food only when we're confident the user meant
+// a branded product. Two paths:
+//   1. The query contains a recognisable brand name (Chobani, Sanitarium,
+//      Helga's, etc.) — among that brand's products, pick the one whose
+//      name/variant/aliases share the most extra words with the query.
+//   2. No brand name, but a long unambiguous alias matches (e.g. "vegemite",
+//      "weetbix", "tim tam") — return that product directly.
+// Generic words like "milk" or "yogurt" never trigger a brand match.
+function matchBrandFood(phrase) {
+  if (!phrase) return null;
+  const q = phrase.toLowerCase().replace(/[^a-z0-9 ]/g, '').trim();
+  if (!q) return null;
+  const qFlat = q.replace(/\s+/g, '');
+  const tokens = q.split(/\s+/).filter(Boolean);
+
+  // Path 1: brand name appears in the query.
+  const brandMatches = [];
+  for (const f of BRAND_FOODS) {
+    const b = (f.brand || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    if (b.length >= 4 && qFlat.includes(b)) brandMatches.push(f);
+  }
+  if (brandMatches.length === 1) return brandMatches[0];
+  if (brandMatches.length > 1) {
+    // Disambiguate by counting query tokens that hit name/variant/alias text.
+    let best = brandMatches[0]; let bestScore = -1;
+    for (const f of brandMatches) {
+      const text = [f.name, f.variant, ...(f.aliases || [])].filter(Boolean).join(' ').toLowerCase();
+      const score = tokens.filter((t) => t.length >= 3 && text.includes(t)).length;
+      if (score > bestScore) { best = f; bestScore = score; }
+    }
+    return best;
+  }
+
+  // Path 2: long unambiguous alias hit.
+  for (const f of BRAND_FOODS) {
+    for (const a of (f.aliases || [])) {
+      const an = a.toLowerCase().replace(/[^a-z0-9]/g, '');
+      if (an.length >= 6 && qFlat.includes(an)) return f;
+    }
+  }
+  return null;
 }
 
 // Exercise parser: "ran 5km in 30 minutes" / "walked with the pram for 45 min"

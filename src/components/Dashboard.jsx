@@ -8,7 +8,7 @@ import {
   parseFoodTranscript, parseExerciseTranscript, classifyTranscript,
 } from '../utils/parser.js';
 import { findFood, nutrientsFor } from '../data/foods.js';
-import { todayISO, newId, dailyCalorieTarget } from '../utils/storage.js';
+import { todayISO, newId, dailyCalorieTarget, macroTargets } from '../utils/storage.js';
 
 function currentMeal() {
   const h = new Date().getHours();
@@ -34,17 +34,21 @@ export default function Dashboard({ state, setState }) {
   );
 
   const totals = useMemo(() => {
-    const t = { kcal: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 };
+    const t = { kcal: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, sugars: 0 };
     dayFood.forEach((e) => {
-      t.kcal += e.kcal; t.protein += e.protein; t.carbs += e.carbs; t.fat += e.fat; t.fiber += e.fiber;
+      t.kcal += e.kcal; t.protein += e.protein; t.carbs += e.carbs;
+      t.fat += e.fat; t.fiber += e.fiber;
+      t.sugars += (e.sugars || 0);
     });
     return t;
   }, [dayFood]);
   const burned = useMemo(() => dayEx.reduce((s,e) => s + e.kcal, 0), [dayEx]);
 
   const target = dailyCalorieTarget(state.profile, state.goals);
-  const proteinT = state.goals.proteinG;
-  const fiberT = state.goals.fiberG;
+  const macros = macroTargets(state.profile, state.goals);
+  const proteinT = macros.protein;
+  const fiberT   = macros.fiber;
+  const sugarT   = macros.sugar;
 
   const submit = (text) => {
     const cls = mode === 'auto' ? classifyTranscript(text) : mode;
@@ -91,8 +95,28 @@ export default function Dashboard({ state, setState }) {
     setState((s) => ({ ...s, exerciseEntries: s.exerciseEntries.filter((e) => e.id !== id) }));
 
   const logBrand = (entry) => {
-    const full = { id: newId(), date, ...entry, meal: entry.meal || currentMeal() };
-    setState((s) => ({ ...s, foodEntries: [...s.foodEntries, full] }));
+    const { _usage, ...rest } = entry;
+    const full = { id: newId(), date, ...rest, meal: rest.meal || currentMeal() };
+    setState((s) => {
+      const usage = { ...(s.brandUsage || {}) };
+      if (rest.brandFoodId && _usage) {
+        const prev = usage[rest.brandFoodId] || { count: 0 };
+        usage[rest.brandFoodId] = {
+          ..._usage,
+          count: (prev.count || 0) + 1,
+          lastDate: todayISO(),
+        };
+      }
+      return { ...s, foodEntries: [...s.foodEntries, full], brandUsage: usage };
+    });
+  };
+
+  const toggleFavourite = (id) => {
+    setState((s) => {
+      const cur = s.favouriteBrands || [];
+      const next = cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id];
+      return { ...s, favouriteBrands: next };
+    });
   };
 
   const recentBrandIds = useMemo(() => {
@@ -116,6 +140,10 @@ export default function Dashboard({ state, setState }) {
         onLogEntry={logBrand}
         meal={currentMeal()}
         recentIds={recentBrandIds}
+        favouriteIds={state.favouriteBrands || []}
+        onToggleFav={toggleFavourite}
+        brandUsage={state.brandUsage || {}}
+        settings={state.settings || {}}
       />
 
       <VoiceInput onSubmit={submit} placeholder={
@@ -154,11 +182,18 @@ export default function Dashboard({ state, setState }) {
             <div className="font-display text-2xl text-moss">{remaining}<span className="text-sm text-muted"> kcal</span></div>
           </div>
         </div>
-        <div className="grid grid-cols-4 gap-2">
-          <Ring value={totals.kcal} target={target} label="Calories" sub={`${burned} burned`} color="#5E7257"/>
-          <Ring value={totals.protein} target={proteinT} label="Protein" sub="g" color="#6B4F60"/>
-          <Ring value={totals.fiber} target={fiberT} label="Fibre" sub="g" color="#C9A98C"/>
-          <Ring value={fruitVegServes} target={state.goals.fruitVegServes} label="Fruit + Veg" sub="serves" color="#D9A6A1"/>
+        <div className="grid grid-cols-3 sm:grid-cols-5 gap-1.5">
+          <Ring size={88} value={totals.kcal}    target={target}   label="Calories" sub={`${burned} burned`} color="#5E7257"/>
+          <Ring size={88} value={totals.protein} target={proteinT} label="Protein"  sub="g" color="#6B4F60"/>
+          <Ring size={88} value={totals.fiber}   target={fiberT}   label="Fibre"    sub="g" color="#C9A98C"/>
+          <Ring size={88}
+            value={Math.round(totals.sugars * 10) / 10}
+            target={sugarT}
+            label="Sugar"
+            sub={`/ ${sugarT}g cap`}
+            color={totals.sugars >= sugarT ? '#C97B6B' : '#D9A6A1'}
+          />
+          <Ring size={88} value={fruitVegServes} target={state.goals.fruitVegServes} label="Fruit + Veg" sub="serves" color="#8FA487"/>
         </div>
         <FoodGroupBar groups={groups} />
       </section>

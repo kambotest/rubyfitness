@@ -62,7 +62,7 @@ export function searchFoods(query, limit = 8) {
 // Compute kcal/macros for an arbitrary amount.
 // amount is interpreted in `unit` (g, ml, or piece).
 export function nutrientsFor(food, amount, unit) {
-  if (!food) return { kcal: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 };
+  if (!food) return { kcal: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, sugars: 0 };
   let factor;
   if (food.unit === 'piece') {
     if (unit === 'piece') factor = amount / food.per;
@@ -73,11 +73,27 @@ export function nutrientsFor(food, amount, unit) {
     factor = amount / food.per;
   }
   const m = (k) => Math.round(((food[k] || 0) * factor) * 10) / 10;
+  const carbs = m('carbs');
   return {
     kcal: Math.round((food.kcal || 0) * factor),
     protein: m('protein'),
-    carbs: m('carbs'),
+    carbs,
     fat: m('fat'),
     fiber: m('fiber'),
+    sugars: estimateSugars(food, carbs),
+    group: food.group,
   };
+}
+
+// Sugar estimator for the generic database (which lacks per-item sugar data).
+// Returns grams of sugar derived from carbs by food group. Brand entries
+// override this with the exact NIP value.
+const SUGAR_RATIO = {
+  fruit: 0.80, beverage: 0.85, condiment: 0.65, snack: 0.45, dairy: 0.55,
+  mixed: 0.15, veg: 0.30, grain: 0.05, legume: 0.10, protein: 0, fat: 0,
+};
+export function estimateSugars(food, carbsG) {
+  if (food.sugars != null) return Math.round(food.sugars * 10) / 10;
+  const r = SUGAR_RATIO[food.group] ?? 0.10;
+  return Math.round((carbsG || 0) * r * 10) / 10;
 }

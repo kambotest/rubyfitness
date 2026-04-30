@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import VoiceInput from './VoiceInput.jsx';
 import { parseFoodTranscript } from '../utils/parser.js';
 import { findFood, nutrientsFor } from '../data/foods.js';
@@ -39,6 +39,10 @@ function RecipeBuilder({ state, setState }) {
   const [link, setLink] = useState('');
   const [linkBusy, setLinkBusy] = useState(false);
   const [linkError, setLinkError] = useState('');
+  const [photoBusy, setPhotoBusy] = useState(false);
+  const [photoStatus, setPhotoStatus] = useState('');
+  const [photoText, setPhotoText] = useState('');
+  const fileRef = useRef(null);
 
   const totals = useMemo(() => sumItems(items), [items]);
   const perServe = scale(totals, 1 / Math.max(1, servings));
@@ -53,6 +57,31 @@ function RecipeBuilder({ state, setState }) {
   };
 
   const removeItem = (id) => setItems((arr) => arr.filter((x) => x.id !== id));
+
+  const handlePhoto = async (file) => {
+    if (!file) return;
+    setPhotoBusy(true); setPhotoStatus('Loading text recogniser…'); setPhotoText('');
+    try {
+      const { recogniseRecipeText, ocrToIngredientText } = await import('../utils/recipeOCR.js');
+      const raw = await recogniseRecipeText(file, {
+        proxyEndpoint: state.settings?.proxyEndpoint,
+        onProgress: (status, p) => setPhotoStatus(`${status}${p ? ' ' + Math.round(p * 100) + '%' : ''}`),
+      });
+      const cleaned = ocrToIngredientText(raw);
+      setPhotoText(cleaned || raw);
+      setPhotoStatus(cleaned ? 'Found ingredients — review and edit before adding.' : "Couldn't pick out ingredient lines. Edit the text below.");
+    } catch (e) {
+      setPhotoStatus(`Could not read the image: ${e.message || e}`);
+    } finally {
+      setPhotoBusy(false);
+    }
+  };
+
+  const usePhotoText = () => {
+    if (!photoText.trim()) return;
+    addFromText(photoText);
+    setPhotoText(''); setPhotoStatus('');
+  };
 
   const importFromLink = async () => {
     if (!link.trim()) return;
@@ -119,6 +148,32 @@ function RecipeBuilder({ state, setState }) {
           </button>
         </div>
         {linkError && <p className="text-xs text-rose">{linkError}</p>}
+
+        <div className="border-t border-sand pt-3">
+          <div className="flex items-center gap-2 flex-wrap">
+            <input ref={fileRef} type="file" accept="image/*" capture="environment"
+              className="hidden"
+              onChange={(e) => handlePhoto(e.target.files?.[0])}/>
+            <button onClick={() => fileRef.current?.click()} disabled={photoBusy}
+              className="btn-soft flex items-center gap-2">
+              <CameraIcon/> {photoBusy ? 'Reading photo…' : 'Photograph recipe'}
+            </button>
+            {photoStatus && <span className="text-xs text-muted">{photoStatus}</span>}
+          </div>
+          <p className="text-[11px] text-muted mt-1">
+            Snap a printed recipe (cookbook, magazine). We'll extract the ingredient lines so you can review them before adding.
+          </p>
+          {photoText && (
+            <div className="mt-2 space-y-2">
+              <textarea value={photoText} onChange={(e) => setPhotoText(e.target.value)}
+                rows={4} className="input" placeholder="Edit the extracted ingredients…"/>
+              <div className="flex gap-2 justify-end">
+                <button onClick={() => { setPhotoText(''); setPhotoStatus(''); }} className="btn-ghost text-sm">Discard</button>
+                <button onClick={usePhotoText} className="btn-primary text-sm">Add as ingredients</button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       <VoiceInput
@@ -303,3 +358,13 @@ function findRecipeIngredients(node) {
 }
 
 function stripTags(s) { return s.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' '); }
+
+function CameraIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 8a2 2 0 0 1 2-2h2l2-2h6l2 2h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+      <circle cx="12" cy="13" r="3.5"/>
+    </svg>
+  );
+}

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { calcMacros, validateBrandFood } from '../utils/brandFoods.js';
 
 // Live macros for a brand food. Three input modes (serving / grams / pack)
@@ -10,42 +10,61 @@ import { calcMacros, validateBrandFood } from '../utils/brandFoods.js';
 //   onLog(entry) — called when user taps "Add to today" (entry is the
 //                  food-entry shape compatible with state.foodEntries)
 //   meal         — current meal slot (breakfast/lunch/...) supplied by parent
-export default function ServingCalculator({ food, onLog, meal = 'meal' }) {
+//   isFavourite  — bool, derived from state.favouriteBrands
+//   onToggleFav(id) — flips favourite state
+//   lastUsage    — { lastAmount, lastMode, count, lastDate } | null
+export default function ServingCalculator({
+  food, onLog, meal = 'meal',
+  isFavourite = false, onToggleFav,
+  lastUsage = null,
+}) {
   const measureUnit = food.serving.unit; // 'g' or 'ml'
-  const [mode, setMode] = useState('serving');
-  const [amount, setAmount] = useState(1);
+  // Prefill from last usage so common foods log in 2 taps. The +/-, the
+  // input field, and the mode toggle all stay live so the user can adjust
+  // before logging.
+  const [mode, setMode] = useState(lastUsage?.lastMode || 'serving');
+  const [amount, setAmount] = useState(lastUsage?.lastAmount ?? 1);
+
+  useEffect(() => {
+    setMode(lastUsage?.lastMode || 'serving');
+    setAmount(lastUsage?.lastAmount ?? 1);
+  }, [food.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const macros = useMemo(() => calcMacros(food, amount, mode), [food, amount, mode]);
   const qa = useMemo(() => validateBrandFood(food), [food]);
 
-  const step = (delta) => {
-    const min = mode === 'serving' || mode === 'package' ? 0.25 : 1;
-    setAmount((a) => Math.max(0, Math.round((Number(a) + delta) * 100) / 100) || min);
-  };
-
   const stepSize = mode === 'serving' || mode === 'package' ? 0.5 : 10;
+  const step = (delta) => {
+    setAmount((a) => {
+      const next = Math.max(0, Math.round((Number(a) + delta) * 100) / 100);
+      return next || stepSize;
+    });
+  };
 
   const log = () => {
     if (!macros.grams) return;
     const label = food.variant ? `${food.brand} ${food.name} (${food.variant})` : `${food.brand} ${food.name}`;
     onLog?.({
       foodId: food.id,
-      brandFoodId: food.id,           // dedicated key so we can re-resolve later
-      group: food.group,              // mirrors generic foods so variety bars work
+      brandFoodId: food.id,
+      group: food.group,
       name: label,
       amount: macros.grams,
-      unit: measureUnit,              // 'g' or 'ml' — matches existing entry schema
-      kcal: macros.kcal,
-      protein: macros.protein,
-      carbs: macros.carbs,
-      fat: macros.fat,
-      fiber: macros.fiber,
-      sodium: macros.sodium,
-      sugars: macros.sugars,
-      satFat: macros.satFat,
+      unit: measureUnit,
+      kcal: macros.kcal, protein: macros.protein, carbs: macros.carbs,
+      fat: macros.fat, fiber: macros.fiber, sodium: macros.sodium,
+      sugars: macros.sugars, satFat: macros.satFat,
       meal,
       raw: `Brand search · ${displayAmount(amount, mode, food)}`,
+      // Pass usage so parent can persist:
+      _usage: { lastAmount: Number(amount) || stepSize, lastMode: mode },
     });
+  };
+
+  const useLast = () => {
+    if (!lastUsage) return;
+    setMode(lastUsage.lastMode || 'serving');
+    setAmount(lastUsage.lastAmount ?? 1);
   };
 
   return (
@@ -62,8 +81,29 @@ export default function ServingCalculator({ food, onLog, meal = 'meal' }) {
             Per 100 {measureUnit}: {food.per100.kcal} kcal · {food.per100.protein}p · {food.per100.carbs}c · {food.per100.fat}f
           </div>
         </div>
-        <QABadge qa={food.qa} runtime={qa} source={food.source} />
+        <div className="flex flex-col items-end gap-1.5 shrink-0">
+          <QABadge qa={food.qa} runtime={qa} source={food.source} />
+          {onToggleFav && (
+            <button onClick={() => onToggleFav(food.id)}
+              aria-label={isFavourite ? 'Remove from favourites' : 'Add to favourites'}
+              className={`text-lg leading-none w-7 h-7 rounded-full flex items-center justify-center transition ${
+                isFavourite ? 'bg-rose/15 text-rose' : 'bg-white/70 text-muted hover:text-rose'
+              }`}>
+              <Star filled={isFavourite}/>
+            </button>
+          )}
+        </div>
       </div>
+
+      {lastUsage && (
+        <div className="flex items-center justify-between mb-2 text-[11px]">
+          <div className="text-muted">
+            Last time: <span className="text-plum font-medium">{prettyLast(lastUsage, food)}</span>
+            {lastUsage.lastDate && <span className="text-muted"> · {lastUsage.lastDate}</span>}
+          </div>
+          <button onClick={useLast} className="text-moss font-medium hover:underline">Use this</button>
+        </div>
+      )}
 
       <div className="flex gap-1.5 mb-3">
         <ModeBtn id="serving" current={mode} setMode={setMode}>Serving</ModeBtn>
@@ -73,7 +113,7 @@ export default function ServingCalculator({ food, onLog, meal = 'meal' }) {
 
       <div className="flex items-center gap-2">
         <button onClick={() => step(-stepSize)} aria-label="Decrease"
-          className="w-10 h-10 rounded-full bg-white border border-sand text-plum text-lg active:scale-95">−</button>
+          className="w-12 h-12 rounded-full bg-white border border-sand text-plum text-xl active:scale-95">−</button>
         <div className="flex-1 relative">
           <input
             type="number" inputMode="decimal" min="0" step={stepSize}
@@ -88,7 +128,7 @@ export default function ServingCalculator({ food, onLog, meal = 'meal' }) {
           </span>
         </div>
         <button onClick={() => step(stepSize)} aria-label="Increase"
-          className="w-10 h-10 rounded-full bg-white border border-sand text-plum text-lg active:scale-95">+</button>
+          className="w-12 h-12 rounded-full bg-white border border-sand text-plum text-xl active:scale-95">+</button>
       </div>
 
       <div className="text-xs text-muted mt-2">
@@ -104,12 +144,12 @@ export default function ServingCalculator({ food, onLog, meal = 'meal' }) {
         </div>
       )}
 
-      <div className="flex items-center justify-between mt-3">
+      <div className="flex items-center justify-between mt-3 gap-2">
         <a href={food.source.url} target="_blank" rel="noreferrer noopener"
           className="text-[11px] text-muted underline hover:text-plum">
-          Source · {food.source.primary === 'woolworths' ? 'Woolworths' : 'Manufacturer'}
+          Source · {sourceLabel(food.source.primary)}
         </a>
-        <button onClick={log} className="btn-primary text-sm h-10 px-5">
+        <button onClick={log} className="btn-primary text-sm h-11 px-5">
           Add to today
         </button>
       </div>
@@ -121,7 +161,7 @@ function ModeBtn({ id, current, setMode, children }) {
   const active = current === id;
   return (
     <button onClick={() => setMode(id)}
-      className={`px-3 py-1.5 rounded-full text-xs font-medium border transition ${
+      className={`px-3 py-2 rounded-full text-xs font-medium border transition ${
         active ? 'bg-moss text-cream border-moss' : 'bg-white/70 text-plum border-sand hover:bg-sand/40'
       }`}>
       {children}
@@ -131,7 +171,7 @@ function ModeBtn({ id, current, setMode, children }) {
 
 function MacroPanel({ macros }) {
   const cells = [
-    { label: 'kcal',   value: macros.kcal,    accent: true },
+    { label: 'kcal',    value: macros.kcal, accent: true },
     { label: 'Protein', value: `${macros.protein}g` },
     { label: 'Carbs',   value: `${macros.carbs}g`, sub: macros.sugars > 0 ? `${macros.sugars}g sugar` : null },
     { label: 'Fat',     value: `${macros.fat}g`,   sub: macros.satFat > 0 ? `${macros.satFat}g sat` : null },
@@ -182,14 +222,33 @@ function Tick({ bad }) {
   );
 }
 
+function Star({ filled }) {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill={filled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinejoin="round">
+      <path d="M12 2l3 7 7 .8-5.3 4.8 1.6 7L12 18l-6.3 3.6 1.6-7L2 9.8 9 9z"/>
+    </svg>
+  );
+}
+
 function unitLabel(mode, food, amount) {
   if (mode === 'serving') return Number(amount) === 1 ? 'serve' : 'serves';
   if (mode === 'package') return Number(amount) === 1 ? 'pack' : 'packs';
   return mode;
 }
-
 function displayAmount(amount, mode, food) {
   if (mode === 'serving') return `${amount} ${unitLabel(mode, food, amount)}`;
   if (mode === 'package') return `${amount} ${unitLabel(mode, food, amount)} (${amount * food.package.size} ${food.package.unit})`;
   return `${amount} ${mode}`;
+}
+function prettyLast(u, food) {
+  if (!u) return '';
+  if (u.lastMode === 'serving') return `${u.lastAmount} ${unitLabel('serving', food, u.lastAmount)}`;
+  if (u.lastMode === 'package') return `${u.lastAmount} ${unitLabel('package', food, u.lastAmount)}`;
+  return `${u.lastAmount} ${u.lastMode}`;
+}
+function sourceLabel(p) {
+  if (p === 'woolworths') return 'Woolworths';
+  if (p === 'openfoodfacts') return 'Open Food Facts';
+  if (p === 'proxy') return 'live lookup';
+  return 'manufacturer';
 }
