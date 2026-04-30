@@ -4,6 +4,7 @@ import {
   BarChart, Bar, ReferenceLine, AreaChart, Area, CartesianGrid,
 } from 'recharts';
 import { isoDaysAgo, todayISO, dailyCalorieTarget, newId } from '../utils/storage.js';
+import { plantsForEntry } from '../data/plants.js';
 
 const RANGES = [
   { id: 7,   label: '7 days' },
@@ -55,11 +56,11 @@ export default function Progress({ state, setState }) {
                   <stop offset="100%" stopColor="#D9A6A1" stopOpacity={0}/>
                 </linearGradient>
               </defs>
-              <CartesianGrid stroke="#EFE6D8" vertical={false}/>
-              <XAxis dataKey="d" tick={{ fontSize: 10, fill: '#8A8078' }} tickFormatter={shortDate} interval={Math.floor(days.length/6)}/>
-              <YAxis tick={{ fontSize: 10, fill: '#8A8078' }} domain={['auto','auto']} width={28}/>
+              <CartesianGrid stroke="#F1E8DC" vertical={false}/>
+              <XAxis dataKey="d" tick={{ fontSize: 10, fill: '#988E83' }} tickFormatter={shortDate} interval={Math.floor(days.length/6)}/>
+              <YAxis tick={{ fontSize: 10, fill: '#988E83' }} domain={['auto','auto']} width={28}/>
               <Tooltip content={<Soft />}/>
-              <ReferenceLine y={state.goals.weightKg} stroke="#5E7257" strokeDasharray="4 4" label={{ value:'goal', fontSize:10, fill:'#5E7257' }}/>
+              <ReferenceLine y={state.goals.weightKg} stroke="#7E9777" strokeDasharray="4 4" label={{ value:'goal', fontSize:10, fill:'#7E9777' }}/>
               <Area type="monotone" dataKey="weight" stroke="#D9A6A1" fill="url(#w)" strokeWidth={2}/>
             </AreaChart>
           </ResponsiveContainer>
@@ -72,12 +73,12 @@ export default function Progress({ state, setState }) {
           <div className="h-44">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={days}>
-                <CartesianGrid stroke="#EFE6D8" vertical={false}/>
-                <XAxis dataKey="d" tick={{ fontSize: 10, fill: '#8A8078' }} tickFormatter={shortDate} interval={Math.floor(days.length/6)}/>
-                <YAxis tick={{ fontSize: 10, fill: '#8A8078' }} width={28}/>
+                <CartesianGrid stroke="#F1E8DC" vertical={false}/>
+                <XAxis dataKey="d" tick={{ fontSize: 10, fill: '#988E83' }} tickFormatter={shortDate} interval={Math.floor(days.length/6)}/>
+                <YAxis tick={{ fontSize: 10, fill: '#988E83' }} width={28}/>
                 <Tooltip content={<Soft />}/>
-                <ReferenceLine y={target} stroke="#5E7257" strokeDasharray="4 4"/>
-                <Bar dataKey="kcal" fill="#C9A98C" radius={[4,4,0,0]}/>
+                <ReferenceLine y={target} stroke="#7E9777" strokeDasharray="4 4"/>
+                <Bar dataKey="kcal" fill="#D4B89D" radius={[4,4,0,0]}/>
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -88,11 +89,11 @@ export default function Progress({ state, setState }) {
           <div className="h-44">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={days}>
-                <CartesianGrid stroke="#EFE6D8" vertical={false}/>
-                <XAxis dataKey="d" tick={{ fontSize: 10, fill: '#8A8078' }} tickFormatter={shortDate} interval={Math.floor(days.length/6)}/>
-                <YAxis tick={{ fontSize: 10, fill: '#8A8078' }} width={28}/>
+                <CartesianGrid stroke="#F1E8DC" vertical={false}/>
+                <XAxis dataKey="d" tick={{ fontSize: 10, fill: '#988E83' }} tickFormatter={shortDate} interval={Math.floor(days.length/6)}/>
+                <YAxis tick={{ fontSize: 10, fill: '#988E83' }} width={28}/>
                 <Tooltip content={<Soft />}/>
-                <Bar dataKey="km" fill="#5E7257" radius={[4,4,0,0]}/>
+                <Bar dataKey="km" fill="#7E9777" radius={[4,4,0,0]}/>
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -104,19 +105,19 @@ export default function Progress({ state, setState }) {
         <div className="h-44">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={days}>
-              <CartesianGrid stroke="#EFE6D8" vertical={false}/>
-              <XAxis dataKey="d" tick={{ fontSize: 10, fill: '#8A8078' }} tickFormatter={shortDate} interval={Math.floor(days.length/6)}/>
-              <YAxis tick={{ fontSize: 10, fill: '#8A8078' }} width={28}/>
+              <CartesianGrid stroke="#F1E8DC" vertical={false}/>
+              <XAxis dataKey="d" tick={{ fontSize: 10, fill: '#988E83' }} tickFormatter={shortDate} interval={Math.floor(days.length/6)}/>
+              <YAxis tick={{ fontSize: 10, fill: '#988E83' }} width={28}/>
               <Tooltip content={<Soft />}/>
-              <ReferenceLine y={state.goals.proteinG} stroke="#5E7257" strokeDasharray="4 4"/>
-              <Line type="monotone" dataKey="protein" stroke="#6B4F60" strokeWidth={2} dot={false}/>
+              <ReferenceLine y={state.goals.proteinG} stroke="#7E9777" strokeDasharray="4 4"/>
+              <Line type="monotone" dataKey="protein" stroke="#8C6E7E" strokeWidth={2} dot={false}/>
             </LineChart>
           </ResponsiveContainer>
         </div>
       </section>
 
       <section className="card p-5">
-        <Header title="Variety streak" sub="Daily food groups represented" />
+        <Header title="Plant variety" sub="Distinct species per day" />
         <Streak days={days}/>
       </section>
     </div>
@@ -157,12 +158,12 @@ function Streak({ days }) {
   return (
     <div className="grid grid-flow-col auto-cols-fr gap-1">
       {days.map((d) => {
-        const v = Math.min(7, d.groups);
-        const opacity = v === 0 ? 0.15 : 0.25 + v * 0.1;
+        const v = Math.min(10, d.plants || 0);
+        const opacity = v === 0 ? 0.12 : 0.22 + v * 0.07;
         return (
-          <div key={d.d} title={`${d.d}: ${d.groups} groups`}
+          <div key={d.d} title={`${d.d}: ${d.plants || 0} plants`}
             className="aspect-square rounded-md"
-            style={{ background:`rgba(94,114,87,${opacity})` }} />
+            style={{ background: `rgba(126,151,119,${opacity})` }} />
         );
       })}
     </div>
@@ -196,7 +197,7 @@ function buildDays(state, startISO, count) {
   for (let i = 0; i < count; i++) {
     const d = new Date(start); d.setDate(start.getDate() + i);
     const iso = d.toISOString().slice(0,10);
-    days.push({ d: iso, kcal:0, protein:0, carbs:0, fat:0, fiber:0, km:0, burned:0, weight:null, groups:0 });
+    days.push({ d: iso, kcal:0, protein:0, carbs:0, fat:0, fiber:0, km:0, burned:0, weight:null, plants:0 });
   }
   const idx = (iso) => days.findIndex((x) => x.d === iso);
 
@@ -218,19 +219,13 @@ function buildDays(state, startISO, count) {
     if (w) last = w.kg;
     day.weight = last;
   });
-  // group variety per day
+  // distinct plant species per day, via the shared plant-tags map
   days.forEach((day) => {
-    const groups = new Set();
+    const set = new Set();
     state.foodEntries.filter((e) => e.date === day.d).forEach((e) => {
-      // we count by name lookup since group isn't stored
-      // fallback: heuristic based on kcal & macros
-      if (e.protein >= 8 && e.fat <= 8) groups.add('protein');
-      if (e.fiber >= 2 && e.kcal <= 80) groups.add('veg');
-      if (e.carbs >= 15 && e.kcal <= 100) groups.add('fruit');
-      if (e.carbs >= 20 && e.fiber >= 1) groups.add('grain');
-      if (e.fat >= 8) groups.add('fat');
+      for (const p of plantsForEntry(e)) set.add(p);
     });
-    day.groups = groups.size;
+    day.plants = set.size;
   });
   return days;
 }

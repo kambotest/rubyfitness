@@ -12,49 +12,53 @@ html, body, #root {
 
 body {
   @apply bg-cream text-ink font-sans antialiased;
+  /* Softer warm-ambient gradient — blush + sage washes blended over cream */
   background-image:
-    radial-gradient(900px 500px at 100% -10%, rgba(217,166,161,0.18), transparent 60%),
-    radial-gradient(700px 400px at -10% 20%, rgba(143,164,135,0.15), transparent 60%);
+    radial-gradient(900px 500px at 100% -10%, rgba(217,166,161,0.14), transparent 60%),
+    radial-gradient(700px 420px at -10% 18%, rgba(176,194,164,0.14), transparent 60%),
+    radial-gradient(600px 380px at 50% 110%, rgba(207,194,214,0.10), transparent 60%);
   background-attachment: fixed;
 }
 
-.font-display { font-family: 'Fraunces', ui-serif, Georgia, serif; }
+.font-display { font-family: 'Fraunces', ui-serif, Georgia, serif; font-weight: 400; letter-spacing: -0.005em; }
 
+/* Cards: gentler border, lighter shadow, more breathing room */
 .card {
-  @apply bg-white/70 backdrop-blur rounded-3xl shadow-soft border border-white/60;
+  @apply bg-white/75 backdrop-blur rounded-3xl shadow-whisper border border-white/70;
 }
 
 .chip {
-  @apply inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-sand text-plum;
+  @apply inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-sand text-plum;
 }
 
 .btn {
   @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl font-medium transition active:scale-[.98];
 }
-.btn-primary { @apply btn bg-moss text-cream hover:bg-[#4f6249]; }
-.btn-soft   { @apply btn bg-sand text-plum hover:bg-[#ead9c5]; }
-.btn-ghost  { @apply btn text-plum hover:bg-sand/60; }
+.btn-primary { @apply btn bg-moss text-cream hover:bg-[#6f8868]; }
+.btn-soft   { @apply btn bg-blush text-plum hover:bg-[#ecd0c8]; }
+.btn-ghost  { @apply btn text-plum hover:bg-blush/60; }
 
 .input {
-  @apply w-full bg-white/80 border border-sand rounded-2xl px-4 py-3 text-ink placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-sage/40;
+  @apply w-full bg-white/80 border border-biscuit rounded-2xl px-4 py-3 text-ink placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-sage/50;
 }
 
 /* Scrollbar */
 ::-webkit-scrollbar { width: 10px; height: 10px; }
-::-webkit-scrollbar-thumb { background: #E6DCCE; border-radius: 999px; }
+::-webkit-scrollbar-thumb { background: #E8DBC7; border-radius: 999px; }
+::-webkit-scrollbar-thumb:hover { background: #D4B89D; }
 
 /* Mic pulse */
 @keyframes pulse-ring {
-  0% { box-shadow: 0 0 0 0 rgba(143,164,135,0.55); }
-  80% { box-shadow: 0 0 0 18px rgba(143,164,135,0); }
-  100% { box-shadow: 0 0 0 0 rgba(143,164,135,0); }
+  0%   { box-shadow: 0 0 0 0 rgba(176,194,164,0.55); }
+  80%  { box-shadow: 0 0 0 18px rgba(176,194,164,0); }
+  100% { box-shadow: 0 0 0 0 rgba(176,194,164,0); }
 }
 .recording { animation: pulse-ring 1.5s infinite; }
 
 /* Subtle entrance */
 @keyframes fade-up {
   from { opacity: 0; transform: translateY(6px); }
-  to { opacity: 1; transform: translateY(0); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 .fade-up { animation: fade-up .35s ease-out both; }
 
@@ -86,13 +90,19 @@ body {
 
 @keyframes pop-in {
   0%   { transform: scale(.5); opacity: 0; }
-  60%  { transform: scale(1.08); opacity: 1; }
+  60%  { transform: scale(1.06); opacity: 1; }
   100% { transform: scale(1); opacity: 1; }
 }
 .pop-in { animation: pop-in .45s cubic-bezier(.34,1.56,.64,1) both; }
 
 .celebrate-glow {
   background:
-    radial-gradient(140px 80px at 50% 0%, rgba(143,164,135,0.35), transparent 70%),
-    radial-gradient(180px 120px at 50% 100%, rgba(217,166,161,0.25), transparent 70%);
+    radial-gradient(140px 80px at 50% 0%,   rgba(176,194,164,0.32), transparent 70%),
+    radial-gradient(180px 120px at 50% 100%, rgba(217,166,161,0.22), transparent 70%);
+}
+
+/* Modal / overlay backdrop — warmer than pure black so it never feels harsh */
+.overlay {
+  background: rgba(62, 57, 51, 0.40);
+  backdrop-filter: blur(6px);
 }

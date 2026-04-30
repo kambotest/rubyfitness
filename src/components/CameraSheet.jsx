@@ -58,7 +58,7 @@ export default function BarcodeSheet({ onScan, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur flex items-end sm:items-center justify-center p-2"
+    <div className="fixed inset-0 z-50 overlay flex items-end sm:items-center justify-center p-2"
          onClick={onClose}>
       <div className="card w-full max-w-md p-4 sm:p-5 fade-up" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-3">

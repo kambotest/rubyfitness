@@ -226,6 +226,15 @@ export default function Dashboard({ state, setState }) {
   }, [state.foodEntries, date]);
   const plantsTarget = state.goals.plantsPerWeek || 50;
 
+  const hydrationToday = state.hydration?.[date]?.ml || 0;
+  const hydrationTarget = state.goals?.hydrationMl || 2500;
+  const addHydration = (delta) =>
+    setState((s) => {
+      const cur = s.hydration?.[date]?.ml || 0;
+      const next = Math.max(0, cur + delta);
+      return { ...s, hydration: { ...(s.hydration || {}), [date]: { ml: next } } };
+    });
+
   return (
     <div className="space-y-5">
       <Header state={state} date={date} setDate={setDate} />
@@ -283,20 +292,24 @@ export default function Dashboard({ state, setState }) {
             <div className="font-display text-2xl text-moss">{remaining}<span className="text-sm text-muted"> kcal</span></div>
           </div>
         </div>
-        <div className="grid grid-cols-3 sm:grid-cols-5 gap-1.5">
-          <Ring size={88} value={totals.kcal}    target={target}   label="Calories" sub={`${burned} burned`} color="#5E7257"/>
-          <Ring size={88} value={totals.protein} target={proteinT} label="Protein"  sub="g" color="#6B4F60"/>
-          <Ring size={88} value={totals.fiber}   target={fiberT}   label="Fibre"    sub="g" color="#C9A98C"/>
-          <Ring size={88}
+        <div className="grid grid-cols-3 sm:grid-cols-6 gap-x-2 gap-y-4">
+          <Ring value={totals.kcal}    target={target}   label="Calories" sub={`${burned} burned`} color="#7E9777"/>
+          <Ring value={totals.protein} target={proteinT} label="Protein"  sub="g"                 color="#8C6E7E"/>
+          <Ring value={totals.fiber}   target={fiberT}   label="Fibre"    sub="g"                 color="#D4B89D"/>
+          <Ring
             value={Math.round(totals.sugars * 10) / 10}
             target={sugarT}
             label="Sugar"
             sub={`/ ${sugarT}g cap`}
-            color={totals.sugars >= sugarT ? '#C97B6B' : '#D9A6A1'}
+            color={totals.sugars >= sugarT ? '#C58A7E' : '#D9A6A1'}
           />
-          <Ring size={88} value={weekPlants.plants.length} target={plantsTarget}
-            label="Plants" sub="this week" color="#8FA487"/>
+          <Ring value={weekPlants.plants.length} target={plantsTarget}
+            label="Plants" sub="this week" color="#B0C2A4"/>
+          <Ring value={hydrationToday} target={hydrationTarget}
+            label="Water" sub="mL" color="#7FA6BB"/>
         </div>
+
+        <HydrationQuickAdd value={hydrationToday} target={hydrationTarget} onAdd={addHydration} />
       </section>
 
       <PlantsCard
@@ -366,6 +379,28 @@ function Header({ state, date, setDate }) {
 function prettyDate(iso) {
   const d = new Date(iso + 'T00:00');
   return d.toLocaleDateString(undefined, { weekday:'long', day:'numeric', month:'long' });
+}
+
+function HydrationQuickAdd({ value, target, onAdd }) {
+  const glasses = Math.round(value / 250);
+  const targetGlasses = Math.round(target / 250);
+  return (
+    <div className="mt-4 pt-3 border-t border-biscuit/60 flex items-center justify-between gap-3 flex-wrap">
+      <div className="text-xs text-muted">
+        <span className="text-plum font-medium">{glasses}</span> of {targetGlasses} glasses today
+      </div>
+      <div className="flex gap-1.5">
+        <button onClick={() => onAdd(250)}
+          className="px-3 py-1.5 rounded-full text-xs font-medium bg-sky/40 text-ocean hover:bg-sky/60 transition active:scale-95">+ glass</button>
+        <button onClick={() => onAdd(500)}
+          className="px-3 py-1.5 rounded-full text-xs font-medium bg-sky/40 text-ocean hover:bg-sky/60 transition active:scale-95">+ bottle</button>
+        {value >= 250 && (
+          <button onClick={() => onAdd(-250)}
+            className="px-3 py-1.5 rounded-full text-xs font-medium bg-white/70 text-muted border border-biscuit hover:text-plum transition active:scale-95">−</button>
+        )}
+      </div>
+    </div>
+  );
 }
 
 function CameraIcon() {

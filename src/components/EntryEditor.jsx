@@ -72,7 +72,7 @@ export default function EntryEditor({
   const cantResolve = (isBrand && !brandFood) || (!isBrand && !genericFood);
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center p-2"
+    <div className="fixed inset-0 z-50 overlay flex items-end sm:items-center justify-center p-2"
          onClick={onClose}>
       <div className="card w-full max-w-md p-4 sm:p-5 fade-up max-h-[92vh] overflow-y-auto"
            onClick={(e) => e.stopPropagation()}>

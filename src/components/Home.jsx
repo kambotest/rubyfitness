@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { todayISO, isoDaysAgo, isoWeek, newId } from '../utils/storage.js';
 import { quoteForDate } from '../data/quotes.js';
 import { tipForToday } from '../utils/tips.js';
-import Hydration from './Hydration.jsx';
 import WeeklyCheckIn from './WeeklyCheckIn.jsx';
 
 // Landing screen. Shows the brand wordmark, today's data-driven tip,
@@ -22,17 +21,6 @@ export default function Home({ state, setState }) {
 
   const tip = useMemo(() => tipForToday(state, date), [state, date]);
   const quote = useMemo(() => quoteForDate(date), [date]);
-
-  const hydrationToday = state.hydration?.[date]?.ml || 0;
-  const hydrationTarget = state.goals?.hydrationMl || 2500;
-  const addHydration = (delta) =>
-    setState((s) => {
-      const cur = s.hydration?.[date]?.ml || 0;
-      const next = Math.max(0, cur + delta);
-      return { ...s, hydration: { ...(s.hydration || {}), [date]: { ml: next } } };
-    });
-  const setHydration = (ml) =>
-    setState((s) => ({ ...s, hydration: { ...(s.hydration || {}), [date]: { ml } } }));
 
   // Weekly check-in: opens once per ISO week on Sundays (or first time
   // the user opens it after a Sunday). Dismissible — never re-opens for
@@ -157,14 +145,6 @@ export default function Home({ state, setState }) {
         <input type="date" value={date} onChange={(e) => setDate(e.target.value)}
           className="bg-white/70 border border-sand rounded-xl px-3 py-2 text-sm" />
       </header>
-
-      {/* Hydration */}
-      <Hydration
-        value={hydrationToday}
-        target={hydrationTarget}
-        onAdd={addHydration}
-        onSet={setHydration}
-      />
 
       {/* Today's tip */}
       {tip && (
@@ -308,7 +288,7 @@ function Celebration({ streak, onClose }) {
   const pieces = useMemo(() => Array.from({ length: 36 }, () => ({
     left: Math.random() * 100,
     drift: (Math.random() - 0.5) * 60,
-    color: ['#5E7257', '#D9A6A1', '#C9A98C', '#8FA487', '#6B4F60', '#F2EADF'][Math.floor(Math.random() * 6)],
+    color: ['#7E9777', '#D9A6A1', '#D4B89D', '#B0C2A4', '#8C6E7E', '#F2DCD5', '#CFC2D6', '#F2E2BD'][Math.floor(Math.random() * 8)],
     delay: Math.random() * 0.4,
     duration: 1.5 + Math.random() * 1.2,
   })), []);
@@ -320,7 +300,7 @@ function Celebration({ streak, onClose }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-label="All goals complete">
-      <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={onClose}/>
+      <div className="absolute inset-0 overlay" onClick={onClose}/>
       {pieces.map((p, i) => (
         <span key={i} className="confetti"
           style={{ left: `${p.left}%`, background: p.color, animationDelay: `${p.delay}s`, animationDuration: `${p.duration}s`, '--drift': `${p.drift}px` }}/>
