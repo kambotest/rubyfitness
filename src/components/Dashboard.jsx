@@ -1,10 +1,11 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import VoiceInput from './VoiceInput.jsx';
 import BrandFoodSearch from './BrandFoodSearch.jsx';
 import Ring from './Rings.jsx';
 import { FoodEntryList, ExerciseEntryList } from './EntryList.jsx';
 import UnknownItemFixer from './UnknownItemFixer.jsx';
 import EntryEditor from './EntryEditor.jsx';
+import PhotoMealCapture, { compressPhoto } from './PhotoMealCapture.jsx';
 import {
   parseFoodTranscript, parseExerciseTranscript, classifyTranscript,
 } from '../utils/parser.js';
@@ -27,6 +28,8 @@ export default function Dashboard({ state, setState }) {
   const [mode, setMode] = useState('auto');      // 'auto'|'food'|'exercise'
   const [date, setDate] = useState(todayISO());
   const [editingEntry, setEditingEntry] = useState(null);
+  const [photoEntry, setPhotoEntry] = useState(null);
+  const photoFileRef = useRef(null);
 
   const dayFood = useMemo(
     () => state.foodEntries.filter((e) => e.date === date),
@@ -109,6 +112,51 @@ export default function Dashboard({ state, setState }) {
       foodEntries: s.foodEntries.map((e) => (e.id === updated.id ? updated : e)),
     }));
     setEditingEntry(null);
+  };
+
+  // Photo-meal "snap now, fill later" pipeline.
+  const handlePhotoCapture = async (file) => {
+    if (!file) return;
+    const dataUrl = await compressPhoto(file, 720, 0.72);
+    if (!dataUrl) return;
+    const photoId = newId();
+    const entryId = newId();
+    setState((s) => ({
+      ...s,
+      photoMeals: { ...(s.photoMeals || {}), [photoId]: { dataUrl, capturedAt: Date.now() } },
+      foodEntries: [...s.foodEntries, {
+        id: entryId, date, meal: currentMeal(),
+        name: 'Photo meal · macros pending',
+        amount: 0, unit: 'g',
+        kcal: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, sugars: 0,
+        photoId, needsMacros: true,
+        raw: 'Photo meal',
+      }],
+    }));
+  };
+
+  const resolvePhotoMeal = (entry, item) => {
+    setState((s) => {
+      const photoMeals = { ...(s.photoMeals || {}) };
+      delete photoMeals[entry.photoId];
+      return {
+        ...s,
+        photoMeals,
+        foodEntries: s.foodEntries.map((e) => (e.id === entry.id ? {
+          ...e,
+          name: item.name,
+          amount: item.amount, unit: item.unit,
+          kcal: item.kcal, protein: item.protein, carbs: item.carbs,
+          fat: item.fat, fiber: item.fiber, sugars: item.sugars,
+          group: item.group,
+          brandFoodId: item.brandFoodId,
+          foodId: item.foodId,
+          needsMacros: false,
+          photoId: undefined,
+        } : e)),
+      };
+    });
+    setPhotoEntry(null);
   };
 
   // Manual plant entry — for plants that aren't in the food database yet
@@ -259,8 +307,19 @@ export default function Dashboard({ state, setState }) {
 
       <section className="grid sm:grid-cols-2 gap-5">
         <div className="card p-5">
-          <h3 className="font-display text-lg mb-2">Eaten</h3>
-          <FoodEntryList entries={dayFood} onDelete={removeFood} onEdit={setEditingEntry} />
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="font-display text-lg">Eaten</h3>
+            <input ref={photoFileRef} type="file" accept="image/*" capture="environment"
+              className="hidden"
+              onChange={(e) => { handlePhotoCapture(e.target.files?.[0]); e.target.value = ''; }}/>
+            <button onClick={() => photoFileRef.current?.click()}
+              className="btn-soft text-xs h-8 px-3 inline-flex items-center gap-1.5"
+              aria-label="Snap meal photo">
+              <CameraIcon/> Snap meal
+            </button>
+          </div>
+          <FoodEntryList entries={dayFood} onDelete={removeFood}
+            onEdit={(e) => e.needsMacros ? setPhotoEntry(e) : setEditingEntry(e)} />
         </div>
         <div className="card p-5">
           <h3 className="font-display text-lg mb-2">Movement</h3>
@@ -275,6 +334,14 @@ export default function Dashboard({ state, setState }) {
           onSave={updateFood}
           onDelete={() => { removeFood(editingEntry.id); setEditingEntry(null); }}
           onClose={() => setEditingEntry(null)}
+        />
+      )}
+      {photoEntry && (
+        <PhotoMealCapture
+          entry={photoEntry}
+          photoMeals={state.photoMeals || {}}
+          onResolve={resolvePhotoMeal}
+          onClose={() => setPhotoEntry(null)}
         />
       )}
     </div>
@@ -299,6 +366,16 @@ function Header({ state, date, setDate }) {
 function prettyDate(iso) {
   const d = new Date(iso + 'T00:00');
   return d.toLocaleDateString(undefined, { weekday:'long', day:'numeric', month:'long' });
+}
+
+function CameraIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 8a2 2 0 0 1 2-2h2l2-2h6l2 2h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+      <circle cx="12" cy="13" r="3.5"/>
+    </svg>
+  );
 }
 
 function PlantsCard({ weekPlants, target, onAddManual }) {

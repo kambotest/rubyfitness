@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { todayISO, isoDaysAgo, newId } from '../utils/storage.js';
+import { todayISO, isoDaysAgo, isoWeek, newId } from '../utils/storage.js';
 import { quoteForDate } from '../data/quotes.js';
 import { tipForToday } from '../utils/tips.js';
+import Hydration from './Hydration.jsx';
+import WeeklyCheckIn from './WeeklyCheckIn.jsx';
 
 // Landing screen. Shows the brand wordmark, today's data-driven tip,
 // a daily-rotating quote, and the full goal checklist (with timers and
@@ -20,6 +22,32 @@ export default function Home({ state, setState }) {
 
   const tip = useMemo(() => tipForToday(state, date), [state, date]);
   const quote = useMemo(() => quoteForDate(date), [date]);
+
+  const hydrationToday = state.hydration?.[date]?.ml || 0;
+  const hydrationTarget = state.goals?.hydrationMl || 2500;
+  const addHydration = (delta) =>
+    setState((s) => {
+      const cur = s.hydration?.[date]?.ml || 0;
+      const next = Math.max(0, cur + delta);
+      return { ...s, hydration: { ...(s.hydration || {}), [date]: { ml: next } } };
+    });
+  const setHydration = (ml) =>
+    setState((s) => ({ ...s, hydration: { ...(s.hydration || {}), [date]: { ml } } }));
+
+  // Weekly check-in: opens once per ISO week on Sundays (or first time
+  // the user opens it after a Sunday). Dismissible — never re-opens for
+  // the same week.
+  const thisWeek = isoWeek(new Date(date + 'T00:00'));
+  const dayOfWeek = new Date(date + 'T00:00').getDay(); // 0 = Sun
+  const showWeeklyCheckIn = (state.weeklyCheckIn?.lastShownIsoWeek !== thisWeek) && dayOfWeek === 0;
+  const [weeklyOpen, setWeeklyOpen] = useState(false);
+  useEffect(() => {
+    if (showWeeklyCheckIn) setWeeklyOpen(true);
+  }, [showWeeklyCheckIn]);
+  const dismissWeekly = () => {
+    setWeeklyOpen(false);
+    setState((s) => ({ ...s, weeklyCheckIn: { ...(s.weeklyCheckIn || {}), lastShownIsoWeek: thisWeek } }));
+  };
 
   // 1Hz tick — drives countdown displays and timer expirations. Same
   // state object is returned when nothing's expired so React skips.
@@ -129,6 +157,14 @@ export default function Home({ state, setState }) {
         <input type="date" value={date} onChange={(e) => setDate(e.target.value)}
           className="bg-white/70 border border-sand rounded-xl px-3 py-2 text-sm" />
       </header>
+
+      {/* Hydration */}
+      <Hydration
+        value={hydrationToday}
+        target={hydrationTarget}
+        onAdd={addHydration}
+        onSet={setHydration}
+      />
 
       {/* Today's tip */}
       {tip && (
@@ -259,6 +295,9 @@ export default function Home({ state, setState }) {
       </section>
 
       {celebrating && <Celebration streak={streak} onClose={() => setCelebrating(false)} />}
+      {weeklyOpen && (
+        <WeeklyCheckIn state={state} setState={setState} onClose={dismissWeekly} today={date} />
+      )}
     </div>
   );
 }

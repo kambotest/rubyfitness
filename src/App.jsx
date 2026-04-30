@@ -5,6 +5,7 @@ import Progress from './components/Progress.jsx';
 import Recipes from './components/Recipes.jsx';
 import Settings from './components/Settings.jsx';
 import { load, save } from './utils/storage.js';
+import { checkAndFire } from './utils/notifications.js';
 
 const TABS = [
   { id: 'home',     label: 'Home',     icon: HomeIcon },
@@ -19,6 +20,14 @@ export default function App() {
   const [tab, setTab] = useState('home');
 
   useEffect(() => { save(state); }, [state]);
+
+  // Run notification triggers every 5 minutes while the app is open.
+  useEffect(() => {
+    const tick = () => checkAndFire(state);
+    tick();
+    const id = setInterval(tick, 5 * 60 * 1000);
+    return () => clearInterval(id);
+  }, [state]);
 
   return (
     <div className="min-h-full pb-32">

@@ -18,7 +18,8 @@ const empty = () => ({
     proteinG: 110,
     fiberG: 30,
     sugarG: 25,
-    plantsPerWeek: 50,        // distinct plant species per 7-day window
+    plantsPerWeek: 50,
+    hydrationMl: 2500,        // daily fluid target (water + tea/coffee count)
     targetDate: null,
     weightLossKgPerWeek: 0.35,
     macroStrategy: 'hba1c',
@@ -44,6 +45,22 @@ const empty = () => ({
                               // active countdowns. Wall-clock based so they keep
                               // running while the app is closed; auto-tick the goal
                               // on expiry.
+  hydration: {},              // { [iso-date]: { ml: number } } — daily fluid total
+  photoMeals: {},             // { [photoId]: { dataUrl, capturedAt } } pending entry
+  notifications: {            // PWA Notification API config (in-page only — fires
+                              // while the app is open or installed as PWA)
+    enabled: false,
+    triggers: { streakAtRisk: true, mealCadence: false, hydrationLow: false },
+    quietStart: '21:00',
+    quietEnd: '07:00',
+  },
+  healthSync: {               // Apple Health XML import + Google Fit OAuth (future).
+    appleHealthLastImportAt: null,
+    googleFit: { connected: false, lastSyncAt: null, refreshToken: null },
+  },
+  weeklyCheckIn: {            // Tracks which Sundays the user has dismissed/seen
+    lastShownIsoWeek: null,
+  },
   settings: {
     proxyEndpoint: '',         // optional Woolworths/manufacturer lookup proxy
     enableOFF: true,           // fall back to Open Food Facts
@@ -68,6 +85,11 @@ export function load() {
       dailyGoals: parsed.dailyGoals && parsed.dailyGoals.length ? parsed.dailyGoals : base.dailyGoals,
       dailyChecks: parsed.dailyChecks || {},
       goalTimers: parsed.goalTimers || {},
+      hydration: parsed.hydration || {},
+      photoMeals: parsed.photoMeals || {},
+      notifications: { ...base.notifications, ...(parsed.notifications || {}) },
+      healthSync: { ...base.healthSync, ...(parsed.healthSync || {}) },
+      weeklyCheckIn: { ...base.weeklyCheckIn, ...(parsed.weeklyCheckIn || {}) },
     };
   } catch {
     return empty();
@@ -83,6 +105,17 @@ export const isoDaysAgo = (n) => {
   const d = new Date(); d.setDate(d.getDate()-n);
   return d.toISOString().slice(0,10);
 };
+
+// ISO 8601 week number ("2026-W18"). Used to gate the weekly check-in to
+// once per Sunday-Saturday window without re-triggering on reload.
+export function isoWeek(date = new Date()) {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const day = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - day);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  const weekNo = Math.ceil(((d - yearStart) / 86400000 + 1) / 7);
+  return `${d.getUTCFullYear()}-W${String(weekNo).padStart(2, '0')}`;
+}
 
 export const newId = () =>
   (typeof crypto !== 'undefined' && crypto.randomUUID)

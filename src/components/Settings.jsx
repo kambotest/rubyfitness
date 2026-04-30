@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import {
   bmr, tdee, lactationKcal, weightLossDeficit, dailyCalorieTarget,
   macroTargets, todayISO,
 } from '../utils/storage.js';
+import { parseAppleHealthExport, mergeAppleHealthIntoState } from '../utils/healthSync.js';
+import { permissionState, requestPermission } from '../utils/notifications.js';
 
 export default function Settings({ state, setState }) {
   const [draft, setDraft] = useState({
@@ -30,6 +32,49 @@ export default function Settings({ state, setState }) {
   const setP = (k, v) => setDraft({ ...draft, profile:  { ...draft.profile,  [k]: v } });
   const setG = (k, v) => setDraft({ ...draft, goals:    { ...draft.goals,    [k]: v } });
   const setS = (k, v) => setDraft({ ...draft, settings: { ...draft.settings, [k]: v } });
+
+  // ---- Health sync (Apple Health XML import) ----
+  const healthFileRef = useRef(null);
+  const [healthBusy, setHealthBusy] = useState(false);
+  const [healthMsg, setHealthMsg] = useState('');
+  const importAppleHealth = async (file) => {
+    if (!file) return;
+    setHealthBusy(true); setHealthMsg('Reading export.xml…');
+    try {
+      const text = await file.text();
+      const parsed = await parseAppleHealthExport(text);
+      const merged = mergeAppleHealthIntoState(state, parsed);
+      const { _imported, ...clean } = merged;
+      setState(clean);
+      setHealthMsg(`Imported ${_imported.workouts} workouts and ${_imported.weights} weights.`);
+    } catch (e) {
+      setHealthMsg(`Could not import: ${e.message || e}`);
+    } finally {
+      setHealthBusy(false);
+    }
+  };
+
+  // ---- Notifications ----
+  const notifPerm = permissionState();
+  const enableNotifications = async () => {
+    const r = await requestPermission();
+    if (r === 'granted') {
+      setDraft({ ...draft, settings: { ...draft.settings } });
+      setState((s) => ({ ...s, notifications: { ...(s.notifications || {}), enabled: true } }));
+    }
+  };
+  const setNotifTrigger = (k, v) => {
+    setState((s) => ({
+      ...s,
+      notifications: {
+        ...(s.notifications || {}),
+        triggers: { ...((s.notifications || {}).triggers || {}), [k]: v },
+      },
+    }));
+  };
+  const setNotifQuiet = (k, v) => {
+    setState((s) => ({ ...s, notifications: { ...(s.notifications || {}), [k]: v } }));
+  };
 
   const exportData = () => {
     const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
@@ -140,6 +185,10 @@ export default function Settings({ state, setState }) {
             <input type="number" value={draft.goals.plantsPerWeek ?? 50}
               onChange={(e)=>setG('plantsPerWeek', +e.target.value)} className="input"/>
           </Field>
+          <Field label="Hydration target (mL/day)">
+            <input type="number" step="100" value={draft.goals.hydrationMl ?? 2500}
+              onChange={(e)=>setG('hydrationMl', +e.target.value)} className="input"/>
+          </Field>
         </div>
         <p className="text-[11px] text-muted">
           Sugar cap defaults to 25 g (American Heart Association recommendation for women, also aligned with WHO &lt;10% energy
@@ -167,6 +216,80 @@ export default function Settings({ state, setState }) {
             <option value="n">Disabled</option>
           </select>
         </Field>
+      </section>
+
+      <section className="card p-5 space-y-3">
+        <h2 className="font-display text-lg">Health sync</h2>
+        <div>
+          <p className="text-xs text-muted mb-2">
+            On iPhone: Health app → profile (top right) → <em>Export All Health Data</em>. Unzip the
+            file and upload <code className="text-[10px]">export.xml</code> below. Workouts and body-weight
+            entries from the last few months will merge in. Steps and heart rate are not imported.
+          </p>
+          <div className="flex items-center gap-2 flex-wrap">
+            <input ref={healthFileRef} type="file" accept=".xml,application/xml,text/xml"
+              className="hidden"
+              onChange={(e) => { importAppleHealth(e.target.files?.[0]); e.target.value = ''; }}/>
+            <button onClick={() => healthFileRef.current?.click()} disabled={healthBusy}
+              className="btn-soft text-sm">
+              {healthBusy ? 'Importing…' : 'Import Apple Health export.xml'}
+            </button>
+            {state.healthSync?.appleHealthLastImportAt && (
+              <span className="text-[11px] text-muted">
+                Last import: {new Date(state.healthSync.appleHealthLastImportAt).toLocaleDateString()}
+              </span>
+            )}
+          </div>
+          {healthMsg && <p className="text-xs text-plum mt-2">{healthMsg}</p>}
+        </div>
+        <div className="border-t border-sand pt-3">
+          <p className="text-xs text-muted">
+            Google Fit and live HealthKit sync require a deployer-side OAuth client ID and (for HealthKit)
+            wrapping the app in a native iOS shell. The architecture is in place — see
+            {' '}<code className="text-[10px]">src/utils/healthSync.js</code> for the OAuth flow.
+          </p>
+        </div>
+      </section>
+
+      <section className="card p-5 space-y-3">
+        <h2 className="font-display text-lg">Notifications</h2>
+        <p className="text-[11px] text-muted">
+          Notifications fire while the app is open in the browser or installed as a PWA. They don't reach
+          you when the app has been closed for a long time — that requires a backend with VAPID push,
+          which isn't part of this build.
+        </p>
+        {notifPerm === 'unsupported' ? (
+          <p className="text-sm text-muted">Notifications aren't supported in this browser.</p>
+        ) : notifPerm === 'denied' ? (
+          <p className="text-sm text-rose">Permission was denied. Enable it in your browser's site settings.</p>
+        ) : notifPerm === 'default' || !state.notifications?.enabled ? (
+          <button onClick={enableNotifications} className="btn-primary text-sm">Enable notifications</button>
+        ) : (
+          <div className="space-y-2">
+            <NotifToggle label="Streak at risk after 8 PM"
+              checked={!!state.notifications?.triggers?.streakAtRisk}
+              onChange={(v) => setNotifTrigger('streakAtRisk', v)} />
+            <NotifToggle label="No food logged by 11 AM"
+              checked={!!state.notifications?.triggers?.mealCadence}
+              onChange={(v) => setNotifTrigger('mealCadence', v)} />
+            <NotifToggle label="Hydration below 50% by 2 PM"
+              checked={!!state.notifications?.triggers?.hydrationLow}
+              onChange={(v) => setNotifTrigger('hydrationLow', v)} />
+            <div className="grid grid-cols-2 gap-2 pt-1">
+              <Field label="Quiet hours start">
+                <input type="time" value={state.notifications?.quietStart || '21:00'}
+                  onChange={(e) => setNotifQuiet('quietStart', e.target.value)} className="input"/>
+              </Field>
+              <Field label="Quiet hours end">
+                <input type="time" value={state.notifications?.quietEnd || '07:00'}
+                  onChange={(e) => setNotifQuiet('quietEnd', e.target.value)} className="input"/>
+              </Field>
+            </div>
+            <button
+              onClick={() => setState((s) => ({ ...s, notifications: { ...(s.notifications || {}), enabled: false } }))}
+              className="btn-ghost text-xs">Disable notifications</button>
+          </div>
+        )}
       </section>
 
       <div className="flex flex-wrap gap-2 justify-end">
@@ -200,4 +323,17 @@ function Field({ label, children }) {
 function pct(part, whole) {
   if (!whole) return 0;
   return Math.round((part / whole) * 100);
+}
+
+function NotifToggle({ label, checked, onChange }) {
+  return (
+    <label className="flex items-center justify-between gap-3 py-1.5 cursor-pointer">
+      <span className="text-sm text-ink">{label}</span>
+      <button onClick={() => onChange(!checked)} type="button"
+        className={`w-10 h-6 rounded-full relative transition ${checked ? 'bg-moss' : 'bg-sand'}`}
+        aria-pressed={checked} aria-label={label}>
+        <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition ${checked ? 'translate-x-4' : ''}`}/>
+      </button>
+    </label>
+  );
 }
