@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { todayISO, isoDaysAgo, newId } from '../utils/storage.js';
+import { quoteForDate } from '../data/quotes.js';
+import { tipForToday } from '../utils/tips.js';
 
-// Daily checklist of recurring habits. Goals are editable. Per-day checks
-// live in state.dailyChecks. Time-based goals (label contains a duration
-// like "30 min" or "2 minutes") get an inline Start button — tap once,
-// the countdown runs in wall-clock time so it survives app close /
-// reload, and auto-ticks the goal on expiry.
-export default function DailyGoals({ state, setState }) {
+// Landing screen. Shows the brand wordmark, today's data-driven tip,
+// a daily-rotating quote, and the full goal checklist (with timers and
+// the all-complete celebration). All goal interactions live here —
+// there is no separate Goals tab.
+export default function Home({ state, setState }) {
   const [date, setDate] = useState(todayISO());
   const [editing, setEditing] = useState(false);
   const [draftLabel, setDraftLabel] = useState('');
@@ -17,9 +18,11 @@ export default function DailyGoals({ state, setState }) {
   const doneCount = goals.reduce((n, g) => n + (checksToday[g.id] ? 1 : 0), 0);
   const allDone = goals.length > 0 && doneCount === goals.length;
 
-  // Tick once a second — drives countdown display and triggers timer
-  // expirations. Returns same state when nothing's expired so React skips
-  // the re-render.
+  const tip = useMemo(() => tipForToday(state, date), [state, date]);
+  const quote = useMemo(() => quoteForDate(date), [date]);
+
+  // 1Hz tick — drives countdown displays and timer expirations. Same
+  // state object is returned when nothing's expired so React skips.
   useEffect(() => {
     const advance = () => {
       const t = Date.now();
@@ -30,7 +33,7 @@ export default function DailyGoals({ state, setState }) {
         const day = { ...(s.dailyChecks?.[date] || {}) };
         const newTimers = { ...timers };
         for (const [goalId, timer] of Object.entries(timers)) {
-          if (timer.date !== date) continue; // stale: only auto-complete same-day
+          if (timer.date !== date) continue;
           const elapsed = (t - timer.startedAt) / 1000;
           if (elapsed >= timer.durationSec) {
             day[goalId] = true;
@@ -54,70 +57,51 @@ export default function DailyGoals({ state, setState }) {
     setState((s) => {
       const day = { ...(s.dailyChecks?.[date] || {}) };
       day[goalId] = !day[goalId];
-      // Manually checking off cancels any running timer for the goal.
       const newTimers = { ...(s.goalTimers || {}) };
       if (newTimers[goalId]) delete newTimers[goalId];
       return { ...s, dailyChecks: { ...(s.dailyChecks || {}), [date]: day }, goalTimers: newTimers };
     });
   };
 
-  const startTimer = (goalId, durationSec) => {
+  const startTimer = (goalId, durationSec) =>
     setState((s) => ({
       ...s,
       goalTimers: { ...(s.goalTimers || {}), [goalId]: { startedAt: Date.now(), durationSec, date } },
     }));
-  };
-  const stopTimer = (goalId) => {
+  const stopTimer = (goalId) =>
     setState((s) => {
       const t = { ...(s.goalTimers || {}) };
       delete t[goalId];
       return { ...s, goalTimers: t };
     });
-  };
 
-  const checkAll = () => {
+  const checkAll = () =>
     setState((s) => {
       const day = {};
       (s.dailyGoals || []).forEach((g) => { day[g.id] = true; });
       return { ...s, dailyChecks: { ...(s.dailyChecks || {}), [date]: day } };
     });
-  };
-  const clearAll = () => {
+  const clearAll = () =>
     setState((s) => ({
       ...s,
       dailyChecks: { ...(s.dailyChecks || {}), [date]: {} },
       goalTimers: {},
     }));
-  };
 
-  const updateLabel = (id, label) => {
-    setState((s) => ({
-      ...s,
-      dailyGoals: (s.dailyGoals || []).map((g) => (g.id === id ? { ...g, label } : g)),
-    }));
-  };
-  const removeGoal = (id) => {
-    setState((s) => ({
-      ...s,
-      dailyGoals: (s.dailyGoals || []).filter((g) => g.id !== id),
-    }));
-  };
+  const updateLabel = (id, label) =>
+    setState((s) => ({ ...s, dailyGoals: (s.dailyGoals || []).map((g) => (g.id === id ? { ...g, label } : g)) }));
+  const removeGoal = (id) =>
+    setState((s) => ({ ...s, dailyGoals: (s.dailyGoals || []).filter((g) => g.id !== id) }));
   const addGoal = () => {
     const label = draftLabel.trim();
     if (!label) return;
-    setState((s) => ({
-      ...s,
-      dailyGoals: [...(s.dailyGoals || []), { id: newId(), label }],
-    }));
+    setState((s) => ({ ...s, dailyGoals: [...(s.dailyGoals || []), { id: newId(), label }] }));
     setDraftLabel('');
   };
 
   const streak = useMemo(() => computeStreak(state.dailyChecks || {}, goals, date), [state.dailyChecks, goals, date]);
 
-  // Celebration: fires when all goals transition from incomplete -> complete.
-  // shownDates ensures we don't re-celebrate on reload of an already-complete
-  // day; ref initialised to the current allDone value so opening the page
-  // when everything is already ticked doesn't trigger a fresh celebration.
+  // Celebration: only on a fresh transition, only once per (date, session).
   const [celebrating, setCelebrating] = useState(false);
   const wasAllDoneRef = useRef(allDone);
   const [shownDates, setShownDates] = useState(() => new Set());
@@ -131,20 +115,49 @@ export default function DailyGoals({ state, setState }) {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-end justify-between gap-4">
+      {/* Wordmark hero */}
+      <header className="flex items-end justify-between gap-4">
         <div>
-          <p className="text-xs uppercase tracking-widest text-muted">Daily goals</p>
-          <h1 className="font-display text-3xl">{allDone ? 'All complete' : 'Daily checklist'}</h1>
+          <p className="text-xs uppercase tracking-[0.18em] text-muted mb-0.5">{prettyDate(date)}</p>
+          <h1 className="font-display text-3xl sm:text-4xl text-ink leading-tight">
+            <span className="text-moss">Built</span><span className="text-plum">Different</span> <span aria-hidden>🤍</span>
+          </h1>
+          {state.profile.name && (
+            <p className="text-sm text-muted mt-1">{greetingFor(state.profile.name)}</p>
+          )}
         </div>
         <input type="date" value={date} onChange={(e) => setDate(e.target.value)}
           className="bg-white/70 border border-sand rounded-xl px-3 py-2 text-sm" />
-      </div>
+      </header>
 
+      {/* Today's tip */}
+      {tip && (
+        <section className={`card p-4 sm:p-5 border-l-4 ${
+          tip.accent === 'positive' ? 'border-moss' :
+          tip.accent === 'attention' ? 'border-rose' : 'border-clay'
+        }`}>
+          <div className="flex items-start gap-3">
+            <span className={`shrink-0 w-9 h-9 rounded-full flex items-center justify-center ${
+              tip.accent === 'positive' ? 'bg-moss/15 text-moss' :
+              tip.accent === 'attention' ? 'bg-rose/15 text-rose' : 'bg-clay/20 text-plum'
+            }`}>
+              <TipIcon accent={tip.accent}/>
+            </span>
+            <div className="min-w-0">
+              <p className="text-[10px] uppercase tracking-widest text-muted">Today's focus</p>
+              <p className="text-sm sm:text-base text-ink leading-snug">{tip.text}</p>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Goals checklist */}
       <section className={`card p-5 transition ${allDone ? 'celebrate-glow' : ''}`}>
         <div className="flex items-center justify-between mb-3">
           <div>
+            <p className="text-[10px] uppercase tracking-widest text-muted">Daily goals</p>
             <div className="font-display text-2xl">{doneCount}<span className="text-muted text-base"> / {goals.length}</span></div>
-            <div className="text-xs text-muted">{prettyDate(date)} · {streak > 0 ? `${streak}-day streak` : 'No streak'}</div>
+            <div className="text-xs text-muted">{streak > 0 ? `${streak}-day streak` : 'No streak'}</div>
           </div>
           <div className="flex gap-2">
             <button onClick={clearAll} className="btn-ghost text-xs">Clear</button>
@@ -167,8 +180,7 @@ export default function DailyGoals({ state, setState }) {
               <li key={g.id} className="py-3">
                 {editing ? (
                   <div className="flex items-center gap-2">
-                    <input value={g.label}
-                      onChange={(e) => updateLabel(g.id, e.target.value)}
+                    <input value={g.label} onChange={(e) => updateLabel(g.id, e.target.value)}
                       className="input flex-1 text-sm"/>
                     <button onClick={() => removeGoal(g.id)}
                       className="text-muted hover:text-rose text-sm px-2"
@@ -229,14 +241,24 @@ export default function DailyGoals({ state, setState }) {
         )}
       </section>
 
+      {/* Daily quote */}
+      {quote && (
+        <section className="card p-5 sm:p-6">
+          <p className="text-[10px] uppercase tracking-widest text-muted mb-2">Today</p>
+          <blockquote className="font-display text-lg sm:text-xl text-ink leading-snug">
+            “{quote.text}”
+          </blockquote>
+          <p className="text-xs text-muted mt-2">— {quote.author}</p>
+        </section>
+      )}
+
+      {/* Last 7 days */}
       <section className="card p-5">
         <h3 className="font-display text-lg mb-3">Last 7 days</h3>
         <Last7Days state={state} goals={goals} />
       </section>
 
-      {celebrating && (
-        <Celebration streak={streak} onClose={() => setCelebrating(false)} />
-      )}
+      {celebrating && <Celebration streak={streak} onClose={() => setCelebrating(false)} />}
     </div>
   );
 }
@@ -244,8 +266,6 @@ export default function DailyGoals({ state, setState }) {
 // ---- Sub-components ----
 
 function Celebration({ streak, onClose }) {
-  // 36 confetti pieces — generated once with random colour, x-position,
-  // horizontal drift, delay and duration so the result feels natural.
   const pieces = useMemo(() => Array.from({ length: 36 }, () => ({
     left: Math.random() * 100,
     drift: (Math.random() - 0.5) * 60,
@@ -254,7 +274,6 @@ function Celebration({ streak, onClose }) {
     duration: 1.5 + Math.random() * 1.2,
   })), []);
 
-  // Auto-dismiss after 6s if the user doesn't tap.
   useEffect(() => {
     const id = setTimeout(onClose, 6000);
     return () => clearTimeout(id);
@@ -265,13 +284,7 @@ function Celebration({ streak, onClose }) {
       <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={onClose}/>
       {pieces.map((p, i) => (
         <span key={i} className="confetti"
-          style={{
-            left: `${p.left}%`,
-            background: p.color,
-            animationDelay: `${p.delay}s`,
-            animationDuration: `${p.duration}s`,
-            '--drift': `${p.drift}px`,
-          }}/>
+          style={{ left: `${p.left}%`, background: p.color, animationDelay: `${p.delay}s`, animationDuration: `${p.duration}s`, '--drift': `${p.drift}px` }}/>
       ))}
       <div className="card relative pop-in p-6 max-w-sm text-center">
         <div className="w-20 h-20 mx-auto rounded-full bg-moss text-cream flex items-center justify-center mb-3">
@@ -280,9 +293,7 @@ function Celebration({ streak, onClose }) {
           </svg>
         </div>
         <h2 className="font-display text-2xl mb-1">All goals complete</h2>
-        <p className="text-sm text-muted">
-          {streak > 1 ? `${streak}-day streak.` : 'First day in a row.'}
-        </p>
+        <p className="text-sm text-muted">{streak > 1 ? `${streak}-day streak.` : 'First day in a row.'}</p>
         <button onClick={onClose} className="btn-primary mt-4 w-full">Done</button>
       </div>
     </div>
@@ -318,9 +329,7 @@ function Last7Days({ state, goals }) {
 
 // ---- Helpers ----
 
-// Extract a duration in seconds from a goal label.
-// Accepts: "30 min", "30 mins", "30 minute(s)", "1 hr", "1 hour", "45 sec".
-export function parseGoalDuration(label) {
+function parseGoalDuration(label) {
   if (!label) return null;
   const m = label.match(/(\d+(?:\.\d+)?)\s*(hours?|hrs?|h|minutes?|mins?|m|seconds?|secs?|s)\b/i);
   if (!m) return null;
@@ -328,49 +337,59 @@ export function parseGoalDuration(label) {
   const u = m[2].toLowerCase();
   if (u.startsWith('h')) return Math.round(n * 3600);
   if (u.startsWith('s')) return Math.round(n);
-  return Math.round(n * 60); // default: minutes
+  return Math.round(n * 60);
 }
-
 function fmtTime(sec) {
   const s = Math.max(0, Math.ceil(sec));
   const m = Math.floor(s / 60);
   const r = s % 60;
   return `${m}:${String(r).padStart(2, '0')}`;
 }
-
 function computeStreak(checks, goals, fromDate) {
   if (!goals.length) return 0;
   let streak = 0;
   const today = checks[fromDate] || {};
-  const todayAllDone = goals.every((g) => today[g.id]);
-  if (todayAllDone) streak += 1;
+  if (goals.every((g) => today[g.id])) streak += 1;
   const cursor = new Date(fromDate + 'T00:00');
   for (let i = 1; i <= 365; i++) {
     const d = new Date(cursor);
     d.setDate(d.getDate() - i);
     const iso = d.toISOString().slice(0, 10);
-    const day = checks[iso] || {};
-    const allDone = goals.every((g) => day[g.id]);
-    if (!allDone) break;
+    if (!goals.every((g) => (checks[iso] || {})[g.id])) break;
     streak += 1;
   }
   return streak;
 }
-
 function prettyDate(iso) {
   return new Date(iso + 'T00:00').toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' });
 }
 function shortDay(iso) {
   return new Date(iso + 'T00:00').toLocaleDateString(undefined, { weekday: 'narrow' });
 }
+function greetingFor(name) {
+  const h = new Date().getHours();
+  const tod = h < 12 ? 'morning' : h < 18 ? 'afternoon' : 'evening';
+  return `Good ${tod}, ${name}.`;
+}
 
 function PlayIcon() {
-  return (
-    <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor">
-      <path d="M6 4l14 8-14 8z"/>
-    </svg>
-  );
+  return (<svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M6 4l14 8-14 8z"/></svg>);
 }
 function PulseDot() {
   return <span className="w-2 h-2 rounded-full bg-rose recording inline-block"/>;
+}
+function TipIcon({ accent }) {
+  if (accent === 'positive') {
+    return (<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M5 12l4 4 10-10"/>
+    </svg>);
+  }
+  if (accent === 'attention') {
+    return (<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 8v5"/><circle cx="12" cy="17" r="0.5"/>
+    </svg>);
+  }
+  return (<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 17V7"/><circle cx="12" cy="4.5" r="0.5"/>
+  </svg>);
 }
