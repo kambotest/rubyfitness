@@ -14,7 +14,7 @@ export default function Recipes({ state, setState }) {
       <div className="flex items-end justify-between">
         <div>
           <p className="text-xs uppercase tracking-widest text-muted">Recipes</p>
-          <h1 className="font-display text-3xl">Cook once, log easy</h1>
+          <h1 className="font-display text-3xl">Recipes</h1>
         </div>
         <div className="flex gap-1">
           {['new','book'].map((t) => (
@@ -177,7 +177,7 @@ function RecipeBuilder({ state, setState }) {
       </div>
 
       <VoiceInput
-        placeholder='Dictate ingredients — e.g. “200g chicken, 1 cup rice, 2 cups broccoli, 1 tbsp olive oil”'
+        placeholder='Dictate ingredients. e.g. "200g chicken, 1 cup rice, 2 cups broccoli, 1 tbsp olive oil"'
         onSubmit={addFromText}
       />
 

@@ -1,5 +1,5 @@
 export function FoodEntryList({ entries, onDelete, onEdit }) {
-  if (!entries.length) return <Empty text="Nothing logged yet today. Speak or type your first bite." />;
+  if (!entries.length) return <Empty text="No food logged." />;
   return (
     <ul className="divide-y divide-sand/70">
       {entries.map((e) => (
@@ -28,7 +28,7 @@ export function FoodEntryList({ entries, onDelete, onEdit }) {
 }
 
 export function ExerciseEntryList({ entries, onDelete }) {
-  if (!entries.length) return <Empty text="No movement logged yet. Walking with the pram counts!" />;
+  if (!entries.length) return <Empty text="No exercise logged." />;
   return (
     <ul className="divide-y divide-sand/70">
       {entries.map((e) => (

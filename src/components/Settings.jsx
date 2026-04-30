@@ -48,7 +48,7 @@ export default function Settings({ state, setState }) {
     <div className="space-y-5">
       <div>
         <p className="text-xs uppercase tracking-widest text-muted">Settings</p>
-        <h1 className="font-display text-3xl">You & your goals</h1>
+        <h1 className="font-display text-3xl">Profile and goals</h1>
       </div>
 
       <section className="card p-5 space-y-3">
@@ -68,15 +68,15 @@ export default function Settings({ state, setState }) {
           </Field>
           <Field label="Activity level">
             <select value={draft.profile.activity} onChange={(e)=>setP('activity', +e.target.value)} className="input">
-              <option value={1.3}>Mostly resting (newborn weeks)</option>
-              <option value={1.45}>Light (walks, gentle pilates)</option>
-              <option value={1.6}>Moderate (regular workouts)</option>
-              <option value={1.75}>High (training most days)</option>
+              <option value={1.3}>Sedentary (PAL 1.3)</option>
+              <option value={1.45}>Light (PAL 1.45)</option>
+              <option value={1.6}>Moderate (PAL 1.6)</option>
+              <option value={1.75}>High (PAL 1.75)</option>
             </select>
           </Field>
           <Field label="Breastfeeding">
             <select value={draft.profile.breastfeeding ? 'y':'n'} onChange={(e)=>setP('breastfeeding', e.target.value === 'y')} className="input">
-              <option value="y">Yes (+ ~400 kcal)</option>
+              <option value="y">Yes (+400 kcal)</option>
               <option value="n">No</option>
             </select>
           </Field>
@@ -136,8 +136,9 @@ export default function Settings({ state, setState }) {
           <Field label="Sugar cap (g/day)">
             <input type="number" value={draft.goals.sugarG} onChange={(e)=>setG('sugarG', +e.target.value)} className="input"/>
           </Field>
-          <Field label="Fruit + Veg serves/day">
-            <input type="number" value={draft.goals.fruitVegServes} onChange={(e)=>setG('fruitVegServes', +e.target.value)} className="input"/>
+          <Field label="Distinct plants per week">
+            <input type="number" value={draft.goals.plantsPerWeek ?? 50}
+              onChange={(e)=>setG('plantsPerWeek', +e.target.value)} className="input"/>
           </Field>
         </div>
         <p className="text-[11px] text-muted">

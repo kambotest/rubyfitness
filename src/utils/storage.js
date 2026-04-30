@@ -4,22 +4,22 @@ const KEY = 'cradle:v1';
 const empty = () => ({
   profile: {
     name: '',
-    weightKg: 72,             // current weight
+    weightKg: 72,
     heightCm: 165,
     age: 32,
-    activity: 1.45,           // PAL — light activity (postpartum baseline)
+    activity: 1.45,           // PAL multiplier
     breastfeeding: true,      // adds ~400 kcal
   },
   goals: {
-    weightKg: 65,             // pre-baby weight
-    weeklyKm: 30,             // running goal
-    proteinG: 110,            // ~1.5 g/kg of goal weight
+    weightKg: 65,
+    weeklyKm: 30,
+    proteinG: 110,
     fiberG: 30,
-    sugarG: 25,               // AHA / WHO guideline for added sugars (women)
-    fruitVegServes: 5,
+    sugarG: 25,
+    plantsPerWeek: 50,        // distinct plant species per 7-day window
     targetDate: null,
-    weightLossKgPerWeek: 0.35, // gentle deficit, 0–0.5 kg/wk recommended postpartum
-    macroStrategy: 'hba1c',   // 'balanced' | 'hba1c' (lower-GL, higher protein)
+    weightLossKgPerWeek: 0.35,
+    macroStrategy: 'hba1c',
   },
   weights: [],                // [{date, kg}]
   foodEntries: [],            // [{id,date,foodId,name,amount,unit,kcal,protein,carbs,fat,fiber,sugars?,sodium?,group?,brandFoodId?,meal,raw}]
@@ -104,7 +104,7 @@ export function lactationKcal(profile) {
 }
 
 // Deficit derived from desired rate of weight loss (1 kg fat ≈ 7700 kcal).
-// Capped so postpartum/breastfeeding mums never drop below a safe floor.
+// Capped by a safety floor in dailyCalorieTarget().
 export function weightLossDeficit(profile, goals) {
   if (profile.weightKg <= goals.weightKg) return 0;
   const rate = Math.max(0, Math.min(0.6, goals.weightLossKgPerWeek || 0.35));

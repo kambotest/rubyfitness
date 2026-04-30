@@ -10,7 +10,8 @@ import {
 } from '../utils/parser.js';
 import { findFood, nutrientsFor } from '../data/foods.js';
 import { findBrandFoodById } from '../utils/brandFoods.js';
-import { todayISO, newId, dailyCalorieTarget, macroTargets } from '../utils/storage.js';
+import { aggregatePlants, plantsForEntry } from '../data/plants.js';
+import { todayISO, newId, isoDaysAgo, dailyCalorieTarget, macroTargets } from '../utils/storage.js';
 
 function currentMeal() {
   const h = new Date().getHours();
@@ -110,6 +111,23 @@ export default function Dashboard({ state, setState }) {
     setEditingEntry(null);
   };
 
+  // Manual plant entry — for plants that aren't in the food database yet
+  // (e.g. "yellow dragonfruit"). Stored as a zero-macro entry tagged with
+  // manualPlants so plantsForEntry() picks it up in the weekly tally.
+  const addManualPlant = (plantName) => {
+    const name = plantName.trim().toLowerCase();
+    if (!name) return;
+    const entry = {
+      id: newId(), date, meal: 'snack',
+      name: name[0].toUpperCase() + name.slice(1),
+      amount: 1, unit: 'piece',
+      kcal: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, sugars: 0,
+      manualPlants: [name],
+      raw: `Manual plant entry: ${name}`,
+    };
+    setState((s) => ({ ...s, foodEntries: [...s.foodEntries, entry] }));
+  };
+
   const logBrand = (entry) => {
     const { _usage, _food, ...rest } = entry;
     const full = { id: newId(), date, ...rest, meal: rest.meal || currentMeal() };
@@ -153,8 +171,12 @@ export default function Dashboard({ state, setState }) {
   }, [state.foodEntries]);
 
   const remaining = Math.max(0, target - totals.kcal + burned);
-  const fruitVegServes = countFruitVegServes(dayFood);
-  const groups = countGroups(dayFood);
+  const weekPlants = useMemo(() => {
+    const start = isoDaysAgo(6);
+    const weekEntries = state.foodEntries.filter((e) => e.date >= start && e.date <= date);
+    return aggregatePlants(weekEntries);
+  }, [state.foodEntries, date]);
+  const plantsTarget = state.goals.plantsPerWeek || 50;
 
   return (
     <div className="space-y-5">
@@ -173,8 +195,8 @@ export default function Dashboard({ state, setState }) {
 
       <VoiceInput onSubmit={submit} placeholder={
         mode === 'exercise'
-          ? 'e.g. “ran 5km in 32 minutes” or “45 min walk with the pram”'
-          : 'e.g. “2 eggs on toast, half an avocado, a flat white”'
+          ? 'e.g. "ran 5km in 32 minutes", "45 min walk"'
+          : 'e.g. "150g chicken, 1 cup rice, half an avocado"'
       } />
 
       <div className="flex gap-2">
@@ -224,10 +246,16 @@ export default function Dashboard({ state, setState }) {
             sub={`/ ${sugarT}g cap`}
             color={totals.sugars >= sugarT ? '#C97B6B' : '#D9A6A1'}
           />
-          <Ring size={88} value={fruitVegServes} target={state.goals.fruitVegServes} label="Fruit + Veg" sub="serves" color="#8FA487"/>
+          <Ring size={88} value={weekPlants.plants.length} target={plantsTarget}
+            label="Plants" sub="this week" color="#8FA487"/>
         </div>
-        <FoodGroupBar groups={groups} />
       </section>
+
+      <PlantsCard
+        weekPlants={weekPlants}
+        target={plantsTarget}
+        onAddManual={(plantName) => addManualPlant(plantName)}
+      />
 
       <section className="grid sm:grid-cols-2 gap-5">
         <div className="card p-5">
@@ -257,9 +285,9 @@ function Header({ state, date, setDate }) {
   return (
     <div className="flex items-end justify-between gap-4">
       <div>
-        <p className="text-xs uppercase tracking-widest text-muted">Cradle</p>
+        <p className="text-xs uppercase tracking-widest text-muted">{prettyDate(date)}</p>
         <h1 className="font-display text-3xl sm:text-4xl text-ink leading-tight">
-          {greeting(state.profile.name)}
+          {state.profile.name || 'Today'}
         </h1>
       </div>
       <input type="date" value={date} onChange={(e)=>setDate(e.target.value)}
@@ -268,70 +296,64 @@ function Header({ state, date, setDate }) {
   );
 }
 
-function greeting(name) {
-  const h = new Date().getHours();
-  const g = h < 12 ? 'Morning' : h < 18 ? 'Afternoon' : 'Evening';
-  return name ? `${g}, ${name}.` : `${g}, mama.`;
-}
-
 function prettyDate(iso) {
   const d = new Date(iso + 'T00:00');
   return d.toLocaleDateString(undefined, { weekday:'long', day:'numeric', month:'long' });
 }
 
-function entryGroup(e) {
-  if (e.group) return e.group;             // brand entries carry their group
-  const f = findFood(e.name);
-  return f ? f.group : null;
-}
-
-function countFruitVegServes(entries) {
-  let s = 0;
-  entries.forEach((e) => {
-    const g = entryGroup(e);
-    if (g !== 'fruit' && g !== 'veg') return;
-    const f = findFood(e.name);
-    const grams = e.unit === 'piece' && f?.pieceGrams ? f.pieceGrams * e.amount : e.amount;
-    s += grams / 80;
-  });
-  return Math.round(s * 10) / 10;
-}
-
-function countGroups(entries) {
-  const groups = { protein:0, grain:0, veg:0, fruit:0, dairy:0, fat:0, legume:0, mixed:0, snack:0, beverage:0, condiment:0 };
-  entries.forEach((e) => {
-    const g = entryGroup(e);
-    if (!g) return;
-    groups[g] = (groups[g] || 0) + e.kcal;
-  });
-  return groups;
-}
-
-function FoodGroupBar({ groups }) {
-  const order = ['protein','veg','fruit','grain','legume','dairy','fat','mixed','snack','beverage','condiment'];
-  const total = Object.values(groups).reduce((a,b)=>a+b,0) || 1;
-  const palette = {
-    protein:'#6B4F60', veg:'#5E7257', fruit:'#D9A6A1', grain:'#C9A98C',
-    legume:'#8FA487', dairy:'#E6DCCE', fat:'#B89F7A', mixed:'#A8927C',
-    snack:'#C97B6B', beverage:'#9CB7C9', condiment:'#D8C7A8',
+function PlantsCard({ weekPlants, target, onAddManual }) {
+  const [adding, setAdding] = useState(false);
+  const [draft, setDraft] = useState('');
+  const count = weekPlants.plants.length;
+  const submit = () => {
+    const v = draft.trim();
+    if (!v) return;
+    onAddManual?.(v);
+    setDraft(''); setAdding(false);
   };
   return (
-    <div className="mt-4">
-      <div className="text-xs text-muted mb-1.5">Variety today</div>
-      <div className="flex h-2.5 rounded-full overflow-hidden bg-sand">
-        {order.map((g) => groups[g] > 0 && (
-          <div key={g} title={`${g}: ${Math.round(groups[g])} kcal`}
-            style={{ width: `${(groups[g]/total)*100}%`, background: palette[g] }} />
-        ))}
+    <section className="card p-5">
+      <div className="flex items-center justify-between mb-3">
+        <div>
+          <h3 className="font-display text-lg">Plants this week</h3>
+          <p className="text-xs text-muted">Distinct plant species over the last 7 days</p>
+        </div>
+        <div className="text-right">
+          <div className="font-display text-2xl text-moss">{count}<span className="text-sm text-muted"> / {target}</span></div>
+        </div>
       </div>
-      <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2 text-[11px] text-muted">
-        {order.map((g) => groups[g] > 0 && (
-          <span key={g} className="inline-flex items-center gap-1">
-            <span className="w-2 h-2 rounded-full" style={{ background: palette[g] }} />
-            {g}
-          </span>
-        ))}
+
+      <div className="h-2 rounded-full bg-sand overflow-hidden mb-3">
+        <div className="h-full bg-sage" style={{ width: `${Math.min(100, (count / target) * 100)}%` }}/>
       </div>
-    </div>
+
+      {count === 0 ? (
+        <p className="text-sm text-muted">No plants logged in the last 7 days.</p>
+      ) : (
+        <div className="flex flex-wrap gap-1.5">
+          {weekPlants.plants.map((p) => (
+            <span key={p} className="chip bg-sage/15 text-moss border border-sage/30">
+              {p}{weekPlants.byPlant[p] > 1 && <span className="text-muted ml-1">×{weekPlants.byPlant[p]}</span>}
+            </span>
+          ))}
+        </div>
+      )}
+
+      <div className="mt-3">
+        {!adding ? (
+          <button onClick={() => setAdding(true)} className="btn-soft text-xs">+ Add plant manually</button>
+        ) : (
+          <div className="flex gap-2">
+            <input value={draft} onChange={(e) => setDraft(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') submit(); if (e.key === 'Escape') setAdding(false); }}
+              autoFocus
+              placeholder="e.g. yellow dragonfruit, kohlrabi…"
+              className="input flex-1 text-sm"/>
+            <button onClick={submit} disabled={!draft.trim()} className="btn-primary text-sm">Add</button>
+            <button onClick={() => { setAdding(false); setDraft(''); }} className="btn-ghost text-sm">Cancel</button>
+          </div>
+        )}
+      </div>
+    </section>
   );
 }

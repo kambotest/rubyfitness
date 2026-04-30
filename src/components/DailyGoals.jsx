@@ -64,7 +64,7 @@ export default function DailyGoals({ state, setState }) {
       <div className="flex items-end justify-between gap-4">
         <div>
           <p className="text-xs uppercase tracking-widest text-muted">Daily goals</p>
-          <h1 className="font-display text-3xl">{allDone ? 'All done — beautiful work.' : 'Tick them off as you go.'}</h1>
+          <h1 className="font-display text-3xl">{allDone ? 'All complete' : 'Daily checklist'}</h1>
         </div>
         <input type="date" value={date} onChange={(e) => setDate(e.target.value)}
           className="bg-white/70 border border-sand rounded-xl px-3 py-2 text-sm" />
@@ -120,7 +120,7 @@ export default function DailyGoals({ state, setState }) {
             );
           })}
           {!goals.length && (
-            <li className="py-4 text-sm text-muted italic">No goals yet. Tap "Edit list" to add some.</li>
+            <li className="py-4 text-sm text-muted italic">No goals defined. Tap "Edit list" to add.</li>
           )}
         </ul>
 
