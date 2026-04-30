@@ -299,11 +299,16 @@ function scale(t, k) {
   };
 }
 
-// Best-effort: fetch a URL via a public read-only proxy and extract recipe ingredients
-// from JSON-LD or schema.org markup. Falls back to nothing if blocked.
+// Best-effort: fetch a URL via public CORS-friendly readers and extract
+// recipe ingredients. Tries (in order):
+//   1. JSON-LD Recipe schema (e.g. taste.com.au, BBC Good Food)
+//   2. Schema.org itemprop="recipeIngredient" lists
+//   3. HTML "Ingredients" heading + following <li> items (editorial sites
+//      like ABC News, news.com.au)
+//   4. Markdown "Ingredients" heading + following list items (used when
+//      r.jina.ai returns the page as cleaned-up Markdown)
 async function fetchRecipeIngredients(url) {
   const u = url.startsWith('http') ? url : `https://${url}`;
-  // Public CORS-friendly readers (best-effort; user can paste ingredients if blocked).
   const proxies = [
     (x) => `https://r.jina.ai/${x}`,
     (x) => `https://corsproxy.io/?${encodeURIComponent(x)}`,
@@ -313,15 +318,24 @@ async function fetchRecipeIngredients(url) {
       const res = await fetch(p(u), { method: 'GET' });
       if (!res.ok) continue;
       const text = await res.text();
-      const ings = extractIngredientsFromHtml(text);
+      const ings = extractIngredients(text);
       if (ings.length) return ings;
     } catch { /* try next */ }
   }
   return [];
 }
 
-function extractIngredientsFromHtml(html) {
-  // 1) Try JSON-LD blocks
+function extractIngredients(text) {
+  return (
+    extractFromJsonLd(text) ||
+    extractFromItemprop(text) ||
+    extractFromHtmlHeading(text) ||
+    extractFromMarkdownHeading(text) ||
+    []
+  );
+}
+
+function extractFromJsonLd(html) {
   const jsonLdMatches = [...html.matchAll(/<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)];
   for (const m of jsonLdMatches) {
     try {
@@ -330,10 +344,58 @@ function extractIngredientsFromHtml(html) {
       if (found && found.length) return found;
     } catch { /* skip */ }
   }
-  // 2) Fallback: grab anything that looks like an ingredient list
+  return null;
+}
+
+function extractFromItemprop(html) {
   const liMatches = [...html.matchAll(/<li[^>]*itemprop=["']recipeIngredient["'][^>]*>([\s\S]*?)<\/li>/gi)];
   if (liMatches.length) return liMatches.map((m) => stripTags(m[1]).trim()).filter(Boolean);
-  return [];
+  return null;
+}
+
+// Editorial heuristic: find an "Ingredients" heading in raw HTML and
+// collect <li> items until the next heading or end-of-section. Works on
+// ABC, news.com.au, blogs that don't ship Schema.org markup.
+function extractFromHtmlHeading(html) {
+  const headingRe = /<h[1-6][^>]*>\s*ingredients?\s*<\/h[1-6]>/i;
+  const hMatch = html.match(headingRe);
+  if (!hMatch) return null;
+  const after = html.slice(hMatch.index + hMatch[0].length);
+  // stop at the next heading (Method/Steps/Instructions/Notes or any h2-h4)
+  const stopRe = /<h[1-4][^>]*>\s*(?:method|directions|instructions|steps?|how to|notes?|preparation)/i;
+  const stopMatch = after.match(stopRe);
+  const slice = stopMatch ? after.slice(0, stopMatch.index) : after.slice(0, 8000);
+  const liMatches = [...slice.matchAll(/<li[^>]*>([\s\S]*?)<\/li>/gi)];
+  if (!liMatches.length) return null;
+  const out = liMatches.map((m) => stripTags(m[1]).trim()).filter((s) => s && s.length < 200);
+  return out.length ? out : null;
+}
+
+// Markdown heuristic: r.jina.ai returns reader-mode Markdown, not HTML.
+// Look for an "Ingredients" heading line and capture list/plain lines
+// until the next heading.
+function extractFromMarkdownHeading(text) {
+  if (!/ingredients/i.test(text)) return null;
+  const lines = text.split(/\r?\n/);
+  let inSection = false;
+  const out = [];
+  const isHeading = (l) => /^#{1,4}\s+\S/.test(l) || /^[A-Z][A-Za-z ]{1,30}$/.test(l.trim());
+  const isStop = (l) => /^(?:#{1,4}\s+)?\s*(method|directions|instructions|steps?|how to make|notes?|preparation|tips?)\b/i.test(l.trim());
+  const isStart = (l) => /^(?:#{1,4}\s+)?\s*ingredients?\s*$/i.test(l.trim());
+  for (const line of lines) {
+    if (!inSection) { if (isStart(line)) inSection = true; continue; }
+    if (isStop(line)) break;
+    if (isHeading(line) && !isStart(line)) {
+      // probably the next section; stop unless we have nothing yet
+      if (out.length) break;
+      continue;
+    }
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+    const cleaned = trimmed.replace(/^[\-•*•]\s*/, '').replace(/^\d+[\.\)]\s*/, '').trim();
+    if (cleaned && cleaned.length < 200 && /[a-z]/i.test(cleaned)) out.push(cleaned);
+  }
+  return out.length ? out : null;
 }
 
 function findRecipeIngredients(node) {

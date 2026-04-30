@@ -89,6 +89,11 @@ export default function Dashboard({ state, setState }) {
     setPending((p) => p.filter((x) => x._id !== pendingItem._id));
   };
 
+  const resolveUnknownBrand = (pendingItem, brandEntry) => {
+    logBrand({ ...brandEntry, raw: pendingItem.raw });
+    setPending((p) => p.filter((x) => x._id !== pendingItem._id));
+  };
+
   const removeFood = (id) =>
     setState((s) => ({ ...s, foodEntries: s.foodEntries.filter((e) => e.id !== id) }));
   const removeEx = (id) =>
@@ -166,8 +171,14 @@ export default function Dashboard({ state, setState }) {
       {pending.map((p) => (
         <UnknownItemFixer key={p._id}
           item={p}
-          onResolve={(payload) => resolveUnknown(p, payload)}
+          onResolveGeneric={(payload) => resolveUnknown(p, payload)}
+          onLogBrand={(entry) => resolveUnknownBrand(p, entry)}
           onSkip={() => setPending((arr) => arr.filter((x) => x._id !== p._id))}
+          settings={state.settings || {}}
+          meal={currentMeal()}
+          favouriteIds={state.favouriteBrands || []}
+          onToggleFav={toggleFavourite}
+          brandUsage={state.brandUsage || {}}
         />
       ))}
 

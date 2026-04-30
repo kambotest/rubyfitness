@@ -186,7 +186,7 @@ export function parseFoodItem(raw) {
     }
   }
 
-  const food = findFood(foodPhrase);
+  const food = findFood(foodPhrase) || findFoodWithStrippedPrefix(foodPhrase);
   if (!food) return { unknown: true, query: foodPhrase, raw };
 
   // resolve quantity → (amount, unit) matching the food's reference unit
@@ -227,6 +227,21 @@ export function parseFoodItem(raw) {
 export function parseFoodTranscript(text) {
   const items = splitItems(text).map(parseFoodItem).filter(Boolean);
   return items;
+}
+
+// When neither the curated brand DB nor the generic DB matches the full
+// phrase, try dropping leading words and retrying — this handles brand-
+// prefixed queries where the brand isn't in our curated list, e.g.
+// "farmers union greek yoghurt" -> "greek yoghurt" matches.
+function findFoodWithStrippedPrefix(phrase) {
+  const words = phrase.split(/\s+/).filter(Boolean);
+  for (let n = 1; n < words.length; n++) {
+    const suffix = words.slice(n).join(' ');
+    if (suffix.length < 3) break;
+    const f = findFood(suffix);
+    if (f) return f;
+  }
+  return null;
 }
 
 // Brand match returns a brand food only when we're confident the user meant
