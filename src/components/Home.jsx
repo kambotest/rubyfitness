@@ -288,7 +288,7 @@ function Celebration({ streak, onClose }) {
   const pieces = useMemo(() => Array.from({ length: 36 }, () => ({
     left: Math.random() * 100,
     drift: (Math.random() - 0.5) * 60,
-    color: ['#7E9777', '#D9A6A1', '#D4B89D', '#B0C2A4', '#8C6E7E', '#F2DCD5', '#CFC2D6', '#F2E2BD'][Math.floor(Math.random() * 8)],
+    color: ['#7FA88E', '#DDA8A6', '#E5C28A', '#C8E0D2', '#8B7BA0', '#F5DAD7', '#DDD3E8', '#F5E8C0', '#F5D9C0', '#C5DCE5'][Math.floor(Math.random() * 10)],
     delay: Math.random() * 0.4,
     duration: 1.5 + Math.random() * 1.2,
   })), []);

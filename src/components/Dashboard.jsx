@@ -293,20 +293,20 @@ export default function Dashboard({ state, setState }) {
           </div>
         </div>
         <div className="grid grid-cols-3 sm:grid-cols-6 gap-x-2 gap-y-4">
-          <Ring value={totals.kcal}    target={target}   label="Calories" sub={`${burned} burned`} color="#7E9777"/>
-          <Ring value={totals.protein} target={proteinT} label="Protein"  sub="g"                 color="#8C6E7E"/>
-          <Ring value={totals.fiber}   target={fiberT}   label="Fibre"    sub="g"                 color="#D4B89D"/>
+          <Ring value={totals.kcal}    target={target}   label="Calories" sub={`${burned} burned`} color="#7FA88E"/>
+          <Ring value={totals.protein} target={proteinT} label="Protein"  sub="g"                 color="#8B7BA0"/>
+          <Ring value={totals.fiber}   target={fiberT}   label="Fibre"    sub="g"                 color="#E5C28A"/>
           <Ring
             value={Math.round(totals.sugars * 10) / 10}
             target={sugarT}
             label="Sugar"
             sub={`/ ${sugarT}g cap`}
-            color={totals.sugars >= sugarT ? '#C58A7E' : '#D9A6A1'}
+            color={totals.sugars >= sugarT ? '#E0A38B' : '#DDA8A6'}
           />
           <Ring value={weekPlants.plants.length} target={plantsTarget}
-            label="Plants" sub="this week" color="#B0C2A4"/>
+            label="Plants" sub="this week" color="#9BC2A8"/>
           <Ring value={hydrationToday} target={hydrationTarget}
-            label="Water" sub="mL" color="#7FA6BB"/>
+            label="Water" sub="mL" color="#7C9FB0"/>
         </div>
 
         <HydrationQuickAdd value={hydrationToday} target={hydrationTarget} onAdd={addHydration} />

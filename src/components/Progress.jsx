@@ -52,16 +52,16 @@ export default function Progress({ state, setState }) {
             <AreaChart data={days}>
               <defs>
                 <linearGradient id="w" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#D9A6A1" stopOpacity={0.5}/>
-                  <stop offset="100%" stopColor="#D9A6A1" stopOpacity={0}/>
+                  <stop offset="0%" stopColor="#DDA8A6" stopOpacity={0.5}/>
+                  <stop offset="100%" stopColor="#DDA8A6" stopOpacity={0}/>
                 </linearGradient>
               </defs>
-              <CartesianGrid stroke="#F1E8DC" vertical={false}/>
-              <XAxis dataKey="d" tick={{ fontSize: 10, fill: '#988E83' }} tickFormatter={shortDate} interval={Math.floor(days.length/6)}/>
-              <YAxis tick={{ fontSize: 10, fill: '#988E83' }} domain={['auto','auto']} width={28}/>
+              <CartesianGrid stroke="#E5E1D8" vertical={false}/>
+              <XAxis dataKey="d" tick={{ fontSize: 10, fill: '#6F6A62' }} tickFormatter={shortDate} interval={Math.floor(days.length/6)}/>
+              <YAxis tick={{ fontSize: 10, fill: '#6F6A62' }} domain={['auto','auto']} width={28}/>
               <Tooltip content={<Soft />}/>
-              <ReferenceLine y={state.goals.weightKg} stroke="#7E9777" strokeDasharray="4 4" label={{ value:'goal', fontSize:10, fill:'#7E9777' }}/>
-              <Area type="monotone" dataKey="weight" stroke="#D9A6A1" fill="url(#w)" strokeWidth={2}/>
+              <ReferenceLine y={state.goals.weightKg} stroke="#7FA88E" strokeDasharray="4 4" label={{ value:'goal', fontSize:10, fill:'#7FA88E' }}/>
+              <Area type="monotone" dataKey="weight" stroke="#DDA8A6" fill="url(#w)" strokeWidth={2}/>
             </AreaChart>
           </ResponsiveContainer>
         </div>
@@ -73,12 +73,12 @@ export default function Progress({ state, setState }) {
           <div className="h-44">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={days}>
-                <CartesianGrid stroke="#F1E8DC" vertical={false}/>
-                <XAxis dataKey="d" tick={{ fontSize: 10, fill: '#988E83' }} tickFormatter={shortDate} interval={Math.floor(days.length/6)}/>
-                <YAxis tick={{ fontSize: 10, fill: '#988E83' }} width={28}/>
+                <CartesianGrid stroke="#E5E1D8" vertical={false}/>
+                <XAxis dataKey="d" tick={{ fontSize: 10, fill: '#6F6A62' }} tickFormatter={shortDate} interval={Math.floor(days.length/6)}/>
+                <YAxis tick={{ fontSize: 10, fill: '#6F6A62' }} width={28}/>
                 <Tooltip content={<Soft />}/>
-                <ReferenceLine y={target} stroke="#7E9777" strokeDasharray="4 4"/>
-                <Bar dataKey="kcal" fill="#D4B89D" radius={[4,4,0,0]}/>
+                <ReferenceLine y={target} stroke="#7FA88E" strokeDasharray="4 4"/>
+                <Bar dataKey="kcal" fill="#E5C28A" radius={[4,4,0,0]}/>
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -89,11 +89,11 @@ export default function Progress({ state, setState }) {
           <div className="h-44">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={days}>
-                <CartesianGrid stroke="#F1E8DC" vertical={false}/>
-                <XAxis dataKey="d" tick={{ fontSize: 10, fill: '#988E83' }} tickFormatter={shortDate} interval={Math.floor(days.length/6)}/>
-                <YAxis tick={{ fontSize: 10, fill: '#988E83' }} width={28}/>
+                <CartesianGrid stroke="#E5E1D8" vertical={false}/>
+                <XAxis dataKey="d" tick={{ fontSize: 10, fill: '#6F6A62' }} tickFormatter={shortDate} interval={Math.floor(days.length/6)}/>
+                <YAxis tick={{ fontSize: 10, fill: '#6F6A62' }} width={28}/>
                 <Tooltip content={<Soft />}/>
-                <Bar dataKey="km" fill="#7E9777" radius={[4,4,0,0]}/>
+                <Bar dataKey="km" fill="#7FA88E" radius={[4,4,0,0]}/>
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -105,12 +105,12 @@ export default function Progress({ state, setState }) {
         <div className="h-44">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={days}>
-              <CartesianGrid stroke="#F1E8DC" vertical={false}/>
-              <XAxis dataKey="d" tick={{ fontSize: 10, fill: '#988E83' }} tickFormatter={shortDate} interval={Math.floor(days.length/6)}/>
-              <YAxis tick={{ fontSize: 10, fill: '#988E83' }} width={28}/>
+              <CartesianGrid stroke="#E5E1D8" vertical={false}/>
+              <XAxis dataKey="d" tick={{ fontSize: 10, fill: '#6F6A62' }} tickFormatter={shortDate} interval={Math.floor(days.length/6)}/>
+              <YAxis tick={{ fontSize: 10, fill: '#6F6A62' }} width={28}/>
               <Tooltip content={<Soft />}/>
-              <ReferenceLine y={state.goals.proteinG} stroke="#7E9777" strokeDasharray="4 4"/>
-              <Line type="monotone" dataKey="protein" stroke="#8C6E7E" strokeWidth={2} dot={false}/>
+              <ReferenceLine y={state.goals.proteinG} stroke="#7FA88E" strokeDasharray="4 4"/>
+              <Line type="monotone" dataKey="protein" stroke="#8B7BA0" strokeWidth={2} dot={false}/>
             </LineChart>
           </ResponsiveContainer>
         </div>
@@ -163,7 +163,7 @@ function Streak({ days }) {
         return (
           <div key={d.d} title={`${d.d}: ${d.plants || 0} plants`}
             className="aspect-square rounded-md"
-            style={{ background: `rgba(126,151,119,${opacity})` }} />
+            style={{ background: `rgba(127,168,142,${opacity})` }} />
         );
       })}
     </div>
