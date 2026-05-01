@@ -88,14 +88,21 @@ function RecipeBuilder({ state, setState }) {
     if (!link.trim()) return;
     setLinkBusy(true); setLinkError('');
     try {
-      const ingredients = await fetchRecipeIngredients(link.trim());
+      const { ingredients, diag } = await fetchRecipeIngredients(link.trim());
       if (!ingredients.length) {
-        setLinkError("Couldn't read ingredients from that link. Try pasting them in below.");
+        if (diag?.reason === 'unreachable') {
+          setLinkError("Couldn't reach that link. Check the URL or paste ingredients in below.");
+        } else if (diag?.reason === 'no-ingredients-markup') {
+          setLinkError("That page loaded but doesn't expose recipe markup. Dictate or paste ingredients below — or try the cookbook photo button.");
+        } else {
+          setLinkError("Couldn't read ingredients from that link. Try pasting them below.");
+        }
       } else {
         addFromText(ingredients.join(' and '));
+        setLink('');
       }
     } catch (e) {
-      setLinkError("Network/CORS blocked the fetch. Paste ingredients in below.");
+      setLinkError("Network blocked the fetch. Paste ingredients in below.");
     } finally {
       setLinkBusy(false);
     }
@@ -301,51 +308,87 @@ function scale(t, k) {
 }
 
 // Best-effort: fetch a URL via public CORS-friendly readers and extract
-// recipe ingredients. Tries (in order):
-//   1. JSON-LD Recipe schema (e.g. taste.com.au, BBC Good Food)
-//   2. Schema.org itemprop="recipeIngredient" lists
-//   3. HTML "Ingredients" heading + following <li> items (editorial sites
-//      like ABC News, news.com.au)
-//   4. Markdown "Ingredients" heading + following list items (used when
-//      r.jina.ai returns the page as cleaned-up Markdown)
+// recipe ingredients. Strategy:
+//   1. Try multiple CORS proxies in fallback order — different proxies
+//      handle different sites (e.g. allorigins handles Cloudflare-fronted
+//      pages that r.jina.ai can refuse).
+//   2. Run every extractor on the response (HTML or Markdown). The first
+//      one to produce a non-empty list wins.
+//
+// Returns { ingredients, diag } where diag describes which proxy/strategy
+// worked or what failed, surfaced to the user as a clearer error.
 async function fetchRecipeIngredients(url) {
   const u = url.startsWith('http') ? url : `https://${url}`;
   const proxies = [
-    (x) => `https://r.jina.ai/${x}`,
-    (x) => `https://corsproxy.io/?${encodeURIComponent(x)}`,
+    { name: 'allorigins', build: (x) => `https://api.allorigins.win/raw?url=${encodeURIComponent(x)}` },
+    { name: 'corsproxy',  build: (x) => `https://corsproxy.io/?${encodeURIComponent(x)}` },
+    { name: 'jina',       build: (x) => `https://r.jina.ai/${x}` },
+    { name: 'codetabs',   build: (x) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(x)}` },
   ];
+
+  const reachedButEmpty = [];
   for (const p of proxies) {
+    let text;
     try {
-      const res = await fetch(p(u), { method: 'GET' });
+      const res = await fetch(p.build(u), { method: 'GET' });
       if (!res.ok) continue;
-      const text = await res.text();
-      const ings = extractIngredients(text);
-      if (ings.length) return ings;
-    } catch { /* try next */ }
+      text = await res.text();
+    } catch {
+      continue; // proxy unreachable
+    }
+    if (!text || text.length < 100) continue;
+    const ings = extractIngredients(text);
+    if (ings.length) return { ingredients: ings, diag: { proxy: p.name } };
+    reachedButEmpty.push(p.name);
   }
-  return [];
+  return {
+    ingredients: [],
+    diag: reachedButEmpty.length
+      ? { reached: reachedButEmpty, reason: 'no-ingredients-markup' }
+      : { reason: 'unreachable' },
+  };
 }
 
 function extractIngredients(text) {
   return (
     extractFromJsonLd(text) ||
     extractFromItemprop(text) ||
+    extractFromClassNames(text) ||
     extractFromHtmlHeading(text) ||
     extractFromMarkdownHeading(text) ||
     []
   );
 }
 
+// JSON-LD — handle multi-block scripts, @graph arrays, and the
+// occasional escaped-HTML wrapping. We strip CDATA markers and re-try
+// parsing if the first attempt fails.
 function extractFromJsonLd(html) {
-  const jsonLdMatches = [...html.matchAll(/<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)];
-  for (const m of jsonLdMatches) {
-    try {
-      const data = JSON.parse(m[1].trim());
-      const found = findRecipeIngredients(data);
-      if (found && found.length) return found;
-    } catch { /* skip */ }
+  const re = /<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
+  const blocks = [...html.matchAll(re)];
+  for (const m of blocks) {
+    let raw = m[1].trim().replace(/^\s*<!\[CDATA\[/, '').replace(/\]\]>\s*$/, '');
+    // Some sites concatenate multiple JSON objects in one script — try
+    // splitting on `}{` boundaries.
+    const candidates = [raw, ...splitConcatenatedJson(raw)];
+    for (const c of candidates) {
+      try {
+        const data = JSON.parse(c);
+        const found = findRecipeIngredients(data);
+        if (found && found.length) return found;
+      } catch { /* skip */ }
+    }
   }
   return null;
+}
+function splitConcatenatedJson(s) {
+  const out = []; let depth = 0; let start = 0;
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i];
+    if (c === '{') { if (depth === 0) start = i; depth += 1; }
+    else if (c === '}') { depth -= 1; if (depth === 0) out.push(s.slice(start, i + 1)); }
+  }
+  return out;
 }
 
 function extractFromItemprop(html) {
@@ -354,18 +397,31 @@ function extractFromItemprop(html) {
   return null;
 }
 
+// Class-name heuristic: many recipe blogs (WP-Recipe-Maker, Tasty, ZipList)
+// emit class names containing "ingredient" without itemprop tags.
+function extractFromClassNames(html) {
+  const re = /<(?:li|div|span)[^>]*class=["'][^"']*\b(?:wprm-recipe-ingredient|tasty-recipes-ingredients?-body|recipe-ingredient|ingredient-list-item|ingredient)[^"']*["'][^>]*>([\s\S]*?)<\/(?:li|div|span)>/gi;
+  const matches = [...html.matchAll(re)];
+  if (!matches.length) return null;
+  const out = matches
+    .map((m) => stripTags(m[1]).trim())
+    .filter((s) => s && s.length > 1 && s.length < 200 && /\d|cup|tbsp|tsp|gram|piece|whole/i.test(s));
+  // Dedupe consecutive duplicates from outer + inner wrapper matches.
+  const seen = new Set();
+  const unique = out.filter((s) => { if (seen.has(s)) return false; seen.add(s); return true; });
+  return unique.length ? unique : null;
+}
+
 // Editorial heuristic: find an "Ingredients" heading in raw HTML and
-// collect <li> items until the next heading or end-of-section. Works on
-// ABC, news.com.au, blogs that don't ship Schema.org markup.
+// collect <li> items until the next heading or end-of-section.
 function extractFromHtmlHeading(html) {
   const headingRe = /<h[1-6][^>]*>\s*ingredients?\s*<\/h[1-6]>/i;
   const hMatch = html.match(headingRe);
   if (!hMatch) return null;
   const after = html.slice(hMatch.index + hMatch[0].length);
-  // stop at the next heading (Method/Steps/Instructions/Notes or any h2-h4)
   const stopRe = /<h[1-4][^>]*>\s*(?:method|directions|instructions|steps?|how to|notes?|preparation)/i;
   const stopMatch = after.match(stopRe);
-  const slice = stopMatch ? after.slice(0, stopMatch.index) : after.slice(0, 8000);
+  const slice = stopMatch ? after.slice(0, stopMatch.index) : after.slice(0, 12000);
   const liMatches = [...slice.matchAll(/<li[^>]*>([\s\S]*?)<\/li>/gi)];
   if (!liMatches.length) return null;
   const out = liMatches.map((m) => stripTags(m[1]).trim()).filter((s) => s && s.length < 200);

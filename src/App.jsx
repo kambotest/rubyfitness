@@ -9,8 +9,8 @@ import { checkAndFire } from './utils/notifications.js';
 import { registerCustomFoods } from './data/foods.js';
 
 const TABS = [
-  { id: 'home',     label: 'Home',     icon: HomeIcon },
   { id: 'today',    label: 'Today',    icon: TodayIcon },
+  { id: 'home',     label: 'Home',     icon: HomeIcon },
   { id: 'progress', label: 'Progress', icon: ProgressIcon },
   { id: 'recipes',  label: 'Recipes',  icon: RecipeIcon },
   { id: 'settings', label: 'You',      icon: SelfIcon },
@@ -18,7 +18,7 @@ const TABS = [
 
 export default function App() {
   const [state, setState] = useState(load);
-  const [tab, setTab] = useState('home');
+  const [tab, setTab] = useState('today');
 
   useEffect(() => { save(state); }, [state]);
 
