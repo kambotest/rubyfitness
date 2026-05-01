@@ -1,4 +1,4 @@
-# Built Different 🤍
+# Built Different
 
 A health and fitness diary — voice-first, one-handed, calorie-and-macro tracking with brand-accurate Australian nutrition data.
 

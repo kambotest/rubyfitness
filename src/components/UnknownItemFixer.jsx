@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { searchFoods, nutrientsFor } from '../data/foods.js';
 import { lookupByText } from '../utils/foodLookup.js';
 import ServingCalculator from './ServingCalculator.jsx';
+import MicField from './MicField.jsx';
+import CustomFoodEditor from './CustomFoodEditor.jsx';
 
 // Lets the user resolve "unknown" food items the parser couldn't match.
 // Searches local generic DB instantly, plus fires the live lookup chain
@@ -14,6 +16,7 @@ import ServingCalculator from './ServingCalculator.jsx';
 //                           is called when the user taps "Add to today".
 export default function UnknownItemFixer({
   item, onResolveGeneric, onLogBrand, onSkip,
+  onSaveCustomFood, onSaveAndLogCustomFood,
   settings = {}, meal = 'meal',
   favouriteIds = [], onToggleFav, brandUsage = {},
 }) {
@@ -22,6 +25,7 @@ export default function UnknownItemFixer({
   const [liveResults, setLiveResults] = useState([]);
   const [liveLoading, setLiveLoading] = useState(false);
   const [liveError, setLiveError] = useState('');
+  const [customOpen, setCustomOpen] = useState(false);
 
   const localResults = useMemo(() => searchFoods(q, 6), [q]);
 
@@ -51,8 +55,8 @@ export default function UnknownItemFixer({
       <div className="text-sm text-plum mb-2">
         Couldn't match <span className="font-medium">"{item.query}"</span>. Pick the closest:
       </div>
-      <input value={q} onChange={(e) => { setQ(e.target.value); setSelectedBrand(null); }}
-        className="input mb-3" placeholder="Search foods or brands…"/>
+      <MicField value={q} onChange={(e) => { setQ(e.target.value); setSelectedBrand(null); }}
+        wrapperClassName="mb-3" className="input" placeholder="Search foods or brands…"/>
 
       {liveLoading && (
         <div className="text-[11px] text-muted mb-2">Looking up Woolworths / Open Food Facts…</div>
@@ -114,9 +118,21 @@ export default function UnknownItemFixer({
         </div>
       )}
 
-      <div className="mt-2 flex justify-end">
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-stone">
+        <button onClick={() => setCustomOpen(true)} className="btn-soft text-sm">
+          + Add as a new food
+        </button>
         <button onClick={onSkip} className="btn-ghost text-sm">Skip</button>
       </div>
+
+      {customOpen && (
+        <CustomFoodEditor
+          initialName={q}
+          onSave={(food) => { onSaveCustomFood?.(food); setCustomOpen(false); }}
+          onSaveAndLog={(food) => { onSaveAndLogCustomFood?.(food); setCustomOpen(false); }}
+          onClose={() => setCustomOpen(false)}
+        />
+      )}
     </div>
   );
 }

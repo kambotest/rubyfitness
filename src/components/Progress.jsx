@@ -60,7 +60,7 @@ export default function Progress({ state, setState }) {
               <XAxis dataKey="d" tick={{ fontSize: 10, fill: '#6F6A62' }} tickFormatter={shortDate} interval={Math.floor(days.length/6)}/>
               <YAxis tick={{ fontSize: 10, fill: '#6F6A62' }} domain={['auto','auto']} width={28}/>
               <Tooltip content={<Soft />}/>
-              <ReferenceLine y={state.goals.weightKg} stroke="#7FA88E" strokeDasharray="4 4" label={{ value:'goal', fontSize:10, fill:'#7FA88E' }}/>
+              <ReferenceLine y={state.goals.weightKg} stroke="#C99097" strokeDasharray="4 4" label={{ value:'goal', fontSize:10, fill:'#C99097' }}/>
               <Area type="monotone" dataKey="weight" stroke="#DDA8A6" fill="url(#w)" strokeWidth={2}/>
             </AreaChart>
           </ResponsiveContainer>
@@ -77,7 +77,7 @@ export default function Progress({ state, setState }) {
                 <XAxis dataKey="d" tick={{ fontSize: 10, fill: '#6F6A62' }} tickFormatter={shortDate} interval={Math.floor(days.length/6)}/>
                 <YAxis tick={{ fontSize: 10, fill: '#6F6A62' }} width={28}/>
                 <Tooltip content={<Soft />}/>
-                <ReferenceLine y={target} stroke="#7FA88E" strokeDasharray="4 4"/>
+                <ReferenceLine y={target} stroke="#C99097" strokeDasharray="4 4"/>
                 <Bar dataKey="kcal" fill="#E5C28A" radius={[4,4,0,0]}/>
               </BarChart>
             </ResponsiveContainer>
@@ -93,7 +93,7 @@ export default function Progress({ state, setState }) {
                 <XAxis dataKey="d" tick={{ fontSize: 10, fill: '#6F6A62' }} tickFormatter={shortDate} interval={Math.floor(days.length/6)}/>
                 <YAxis tick={{ fontSize: 10, fill: '#6F6A62' }} width={28}/>
                 <Tooltip content={<Soft />}/>
-                <Bar dataKey="km" fill="#7FA88E" radius={[4,4,0,0]}/>
+                <Bar dataKey="km" fill="#C99097" radius={[4,4,0,0]}/>
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -109,8 +109,8 @@ export default function Progress({ state, setState }) {
               <XAxis dataKey="d" tick={{ fontSize: 10, fill: '#6F6A62' }} tickFormatter={shortDate} interval={Math.floor(days.length/6)}/>
               <YAxis tick={{ fontSize: 10, fill: '#6F6A62' }} width={28}/>
               <Tooltip content={<Soft />}/>
-              <ReferenceLine y={state.goals.proteinG} stroke="#7FA88E" strokeDasharray="4 4"/>
-              <Line type="monotone" dataKey="protein" stroke="#8B7BA0" strokeWidth={2} dot={false}/>
+              <ReferenceLine y={state.goals.proteinG} stroke="#C99097" strokeDasharray="4 4"/>
+              <Line type="monotone" dataKey="protein" stroke="#E0A38B" strokeWidth={2} dot={false}/>
             </LineChart>
           </ResponsiveContainer>
         </div>

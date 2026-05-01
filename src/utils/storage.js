@@ -28,6 +28,7 @@ const empty = () => ({
   foodEntries: [],            // [{id,date,foodId,name,amount,unit,kcal,protein,carbs,fat,fiber,sugars?,sodium?,group?,brandFoodId?,meal,raw}]
   exerciseEntries: [],        // [{id,date,exerciseId,name,minutes,km,kcal,raw}]
   recipes: [],                // [{id,name,servings,items,perServe:{kcal,protein,carbs,fat,fiber}}]
+  customFoods: [],            // [{id,name,group,unit,per,pieceGrams?,kcal,...}] — user-added foods, searchable like generics
   favouriteBrands: [],        // [brandFoodId, ...]
   brandUsage: {},             // { [brandFoodId]: {lastAmount, lastMode, count, lastDate} }
   cachedBrands: {},           // { [brandFoodId]: <full brand-food object> } — live results
@@ -79,6 +80,7 @@ export function load() {
       profile:  { ...base.profile,  ...(parsed.profile  || {}) },
       goals:    { ...base.goals,    ...(parsed.goals    || {}) },
       settings: { ...base.settings, ...(parsed.settings || {}) },
+      customFoods: parsed.customFoods || [],
       favouriteBrands: parsed.favouriteBrands || [],
       brandUsage: parsed.brandUsage || {},
       cachedBrands: parsed.cachedBrands || {},

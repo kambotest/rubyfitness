@@ -6,6 +6,7 @@ import { FoodEntryList, ExerciseEntryList } from './EntryList.jsx';
 import UnknownItemFixer from './UnknownItemFixer.jsx';
 import EntryEditor from './EntryEditor.jsx';
 import PhotoMealCapture, { compressPhoto } from './PhotoMealCapture.jsx';
+import CustomFoodEditor from './CustomFoodEditor.jsx';
 import {
   parseFoodTranscript, parseExerciseTranscript, classifyTranscript,
 } from '../utils/parser.js';
@@ -29,6 +30,7 @@ export default function Dashboard({ state, setState }) {
   const [date, setDate] = useState(todayISO());
   const [editingEntry, setEditingEntry] = useState(null);
   const [photoEntry, setPhotoEntry] = useState(null);
+  const [customOpen, setCustomOpen] = useState(false);
   const photoFileRef = useRef(null);
 
   const dayFood = useMemo(
@@ -99,6 +101,29 @@ export default function Dashboard({ state, setState }) {
   const resolveUnknownBrand = (pendingItem, brandEntry) => {
     logBrand({ ...brandEntry, raw: pendingItem.raw });
     setPending((p) => p.filter((x) => x._id !== pendingItem._id));
+  };
+
+  const saveCustomFood = (food) => {
+    setState((s) => ({ ...s, customFoods: [...(s.customFoods || []), food] }));
+  };
+
+  const saveCustomFoodAndLog = (pendingItem, food) => {
+    saveCustomFood(food);
+    // Log a single piece (if piece) or 100 g/ml otherwise.
+    const amount = food.unit === 'piece' ? 1 : food.per;
+    const macros = nutrientsFor(food, amount, food.unit);
+    setState((s) => ({
+      ...s,
+      foodEntries: [...s.foodEntries, {
+        id: newId(), date, meal: currentMeal(),
+        foodId: food.id, name: food.name,
+        amount, unit: food.unit,
+        ...macros,
+        group: food.group,
+        raw: pendingItem ? pendingItem.raw : food.name,
+      }],
+    }));
+    if (pendingItem) setPending((p) => p.filter((x) => x._id !== pendingItem._id));
   };
 
   const removeFood = (id) =>
@@ -260,7 +285,7 @@ export default function Dashboard({ state, setState }) {
         {['auto','food','exercise'].map((m) => (
           <button key={m}
             onClick={() => setMode(m)}
-            className={`px-3 py-1.5 rounded-full text-xs font-medium border ${mode===m ? 'bg-moss text-cream border-moss' : 'bg-white/60 text-plum border-sand'}`}
+            className={`px-3 py-1.5 rounded-full text-xs font-medium border ${mode===m ? 'bg-dusty text-canvas border-dusty' : 'bg-white/60 text-charcoal border-stone'}`}
           >
             {m === 'auto' ? 'Smart' : m === 'food' ? 'Food only' : 'Exercise only'}
           </button>
@@ -272,6 +297,8 @@ export default function Dashboard({ state, setState }) {
           item={p}
           onResolveGeneric={(payload) => resolveUnknown(p, payload)}
           onLogBrand={(entry) => resolveUnknownBrand(p, entry)}
+          onSaveCustomFood={(food) => { saveCustomFood(food); setPending((arr) => arr.filter((x) => x._id !== p._id)); }}
+          onSaveAndLogCustomFood={(food) => saveCustomFoodAndLog(p, food)}
           onSkip={() => setPending((arr) => arr.filter((x) => x._id !== p._id))}
           settings={state.settings || {}}
           meal={currentMeal()}
@@ -293,15 +320,15 @@ export default function Dashboard({ state, setState }) {
           </div>
         </div>
         <div className="grid grid-cols-3 sm:grid-cols-6 gap-x-2 gap-y-4">
-          <Ring value={totals.kcal}    target={target}   label="Calories" sub={`${burned} burned`} color="#7FA88E"/>
-          <Ring value={totals.protein} target={proteinT} label="Protein"  sub="g"                 color="#8B7BA0"/>
+          <Ring value={totals.kcal}    target={target}   label="Calories" sub={`${burned} burned`} color="#C99097"/>
+          <Ring value={totals.protein} target={proteinT} label="Protein"  sub="g"                 color="#E0A38B"/>
           <Ring value={totals.fiber}   target={fiberT}   label="Fibre"    sub="g"                 color="#E5C28A"/>
           <Ring
             value={Math.round(totals.sugars * 10) / 10}
             target={sugarT}
             label="Sugar"
             sub={`/ ${sugarT}g cap`}
-            color={totals.sugars >= sugarT ? '#E0A38B' : '#DDA8A6'}
+            color={totals.sugars >= sugarT ? '#B6757B' : '#E5B7B3'}
           />
           <Ring value={weekPlants.plants.length} target={plantsTarget}
             label="Plants" sub="this week" color="#9BC2A8"/>
@@ -320,16 +347,23 @@ export default function Dashboard({ state, setState }) {
 
       <section className="grid sm:grid-cols-2 gap-5">
         <div className="card p-5">
-          <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
             <h3 className="font-display text-lg">Eaten</h3>
-            <input ref={photoFileRef} type="file" accept="image/*" capture="environment"
-              className="hidden"
-              onChange={(e) => { handlePhotoCapture(e.target.files?.[0]); e.target.value = ''; }}/>
-            <button onClick={() => photoFileRef.current?.click()}
-              className="btn-soft text-xs h-8 px-3 inline-flex items-center gap-1.5"
-              aria-label="Snap meal photo">
-              <CameraIcon/> Snap meal
-            </button>
+            <div className="flex gap-1.5">
+              <input ref={photoFileRef} type="file" accept="image/*" capture="environment"
+                className="hidden"
+                onChange={(e) => { handlePhotoCapture(e.target.files?.[0]); e.target.value = ''; }}/>
+              <button onClick={() => setCustomOpen(true)}
+                className="btn-soft text-xs h-8 px-3 inline-flex items-center gap-1.5"
+                aria-label="Add a custom food">
+                + Custom
+              </button>
+              <button onClick={() => photoFileRef.current?.click()}
+                className="btn-soft text-xs h-8 px-3 inline-flex items-center gap-1.5"
+                aria-label="Snap meal photo">
+                <CameraIcon/> Snap meal
+              </button>
+            </div>
           </div>
           <FoodEntryList entries={dayFood} onDelete={removeFood}
             onEdit={(e) => e.needsMacros ? setPhotoEntry(e) : setEditingEntry(e)} />
@@ -337,6 +371,7 @@ export default function Dashboard({ state, setState }) {
         <div className="card p-5">
           <h3 className="font-display text-lg mb-2">Movement</h3>
           <ExerciseEntryList entries={dayEx} onDelete={removeEx} />
+          <AppleHealthHint state={state} />
         </div>
       </section>
 
@@ -355,6 +390,13 @@ export default function Dashboard({ state, setState }) {
           photoMeals={state.photoMeals || {}}
           onResolve={resolvePhotoMeal}
           onClose={() => setPhotoEntry(null)}
+        />
+      )}
+      {customOpen && (
+        <CustomFoodEditor
+          onSave={(food) => { saveCustomFood(food); setCustomOpen(false); }}
+          onSaveAndLog={(food) => { saveCustomFoodAndLog(null, food); setCustomOpen(false); }}
+          onClose={() => setCustomOpen(false)}
         />
       )}
     </div>
@@ -399,6 +441,27 @@ function HydrationQuickAdd({ value, target, onAdd }) {
             className="px-3 py-1.5 rounded-full text-xs font-medium bg-white/70 text-muted border border-biscuit hover:text-plum transition active:scale-95">−</button>
         )}
       </div>
+    </div>
+  );
+}
+
+function AppleHealthHint({ state }) {
+  // Only nudge when there's no exercise data in the last 14 days — once
+  // imported, the user doesn't need the prompt.
+  const cutoff = isoDaysAgo(13);
+  const recent = (state.exerciseEntries || []).some((e) => e.date >= cutoff);
+  const lastImport = state.healthSync?.appleHealthLastImportAt;
+  const lastImportRecent = lastImport && (Date.now() - new Date(lastImport).getTime()) < 14 * 86400 * 1000;
+  if (recent || lastImportRecent) return null;
+  return (
+    <div className="mt-3 pt-3 border-t border-stone text-[11px] text-muted">
+      <p className="text-charcoal text-xs font-medium mb-1">Apple Watch?</p>
+      <p>
+        Open the Health app on your iPhone → profile → <em>Export All Health Data</em>. Unzip and
+        upload <code className="text-[10px] text-charcoal">export.xml</code> in Settings → Health
+        sync. Workouts, body weights and run distances merge into your log. Live HealthKit sync
+        needs a native iOS wrapper, which isn't part of this build.
+      </p>
     </div>
   );
 }

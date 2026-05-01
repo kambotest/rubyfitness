@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { searchBrandFoods, findBrandFoodById, BRAND_FOODS, validateBrandFood } from '../utils/brandFoods.js';
 import { lookupByBarcode, lookupByText } from '../utils/foodLookup.js';
 import ServingCalculator from './ServingCalculator.jsx';
+import MicField from './MicField.jsx';
 
 const BarcodeSheet = lazy(() => import('./CameraSheet.jsx'));
 
@@ -133,20 +134,15 @@ export default function BrandFoodSearch({
       </div>
 
       <div className="flex gap-2">
-        <div className="relative flex-1">
-          <input ref={inputRef}
-            value={query}
-            onChange={(e) => { setQuery(e.target.value); setSelected(null); }}
-            placeholder="e.g. Chobani vanilla, Weet-Bix, Helga's…"
-            className="input pr-10"
-            aria-label="Search brand foods"
-          />
-          {query && (
-            <button onClick={() => { setQuery(''); setSelected(null); inputRef.current?.focus(); }}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted hover:text-plum w-7 h-7 rounded-full"
-              aria-label="Clear">×</button>
-          )}
-        </div>
+        <MicField
+          ref={inputRef}
+          wrapperClassName="flex-1"
+          value={query}
+          onChange={(e) => { setQuery(e.target.value); setSelected(null); }}
+          placeholder="e.g. Chobani vanilla, Weet-Bix, Helga's…"
+          className="input"
+          aria-label="Search brand foods"
+        />
         <button onClick={() => setScanning(true)}
           className="shrink-0 w-12 h-12 rounded-2xl bg-moss text-cream flex items-center justify-center"
           aria-label="Scan barcode">

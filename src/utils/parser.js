@@ -202,10 +202,21 @@ export function parseFoodItem(raw) {
   } else {
     // food expressed per 100 g/ml
     if (!unit) {
-      // bare number → assume "1 serve" of ~100g (or piece-like)
-      amount = food.per * count; useUnit = food.unit;
+      if (food.pieceGrams) {
+        // bare-count of a piece-eligible food — "6 blackberries" with
+        // pieceGrams=5 -> 30 g.
+        amount = food.pieceGrams * count;
+      } else {
+        // generic bare number → assume "1 serve" of ~100 g/ml.
+        amount = food.per * count;
+      }
+      useUnit = food.unit;
     } else if (unit === 'g' || unit === 'ml') {
       amount = count; useUnit = unit;
+    } else if ((unit === 'piece' || unit === 'pieces') && food.pieceGrams) {
+      // explicit "6 pieces" of a piece-eligible food.
+      amount = food.pieceGrams * count;
+      useUnit = food.unit;
     } else {
       const g = gramsForLooseUnit(food, unit, count);
       amount = g != null ? g : food.per * count;

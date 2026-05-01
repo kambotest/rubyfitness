@@ -3,6 +3,7 @@ import { todayISO, isoDaysAgo, isoWeek, newId } from '../utils/storage.js';
 import { quoteForDate } from '../data/quotes.js';
 import { tipForToday } from '../utils/tips.js';
 import WeeklyCheckIn from './WeeklyCheckIn.jsx';
+import MicField from './MicField.jsx';
 
 // Landing screen. Shows the brand wordmark, today's data-driven tip,
 // a daily-rotating quote, and the full goal checklist (with timers and
@@ -136,7 +137,7 @@ export default function Home({ state, setState }) {
         <div>
           <p className="text-xs uppercase tracking-[0.18em] text-muted mb-0.5">{prettyDate(date)}</p>
           <h1 className="font-display text-3xl sm:text-4xl text-ink leading-tight">
-            <span className="text-moss">Built</span><span className="text-plum">Different</span> <span aria-hidden>🤍</span>
+            <span className="text-charcoal">Built</span><span className="text-dusty">Different</span>
           </h1>
           {state.profile.name && (
             <p className="text-sm text-muted mt-1">{greetingFor(state.profile.name)}</p>
@@ -149,13 +150,13 @@ export default function Home({ state, setState }) {
       {/* Today's tip */}
       {tip && (
         <section className={`card p-4 sm:p-5 border-l-4 ${
-          tip.accent === 'positive' ? 'border-moss' :
-          tip.accent === 'attention' ? 'border-rose' : 'border-clay'
+          tip.accent === 'positive' ? 'border-rose' :
+          tip.accent === 'attention' ? 'border-coral' : 'border-mushroom'
         }`}>
           <div className="flex items-start gap-3">
             <span className={`shrink-0 w-9 h-9 rounded-full flex items-center justify-center ${
-              tip.accent === 'positive' ? 'bg-moss/15 text-moss' :
-              tip.accent === 'attention' ? 'bg-rose/15 text-rose' : 'bg-clay/20 text-plum'
+              tip.accent === 'positive' ? 'bg-blush text-dusty' :
+              tip.accent === 'attention' ? 'bg-peach text-coral' : 'bg-linen text-charcoal'
             }`}>
               <TipIcon accent={tip.accent}/>
             </span>
@@ -196,8 +197,8 @@ export default function Home({ state, setState }) {
               <li key={g.id} className="py-3">
                 {editing ? (
                   <div className="flex items-center gap-2">
-                    <input value={g.label} onChange={(e) => updateLabel(g.id, e.target.value)}
-                      className="input flex-1 text-sm"/>
+                    <MicField value={g.label} onChange={(e) => updateLabel(g.id, e.target.value)}
+                      wrapperClassName="flex-1" className="input text-sm"/>
                     <button onClick={() => removeGoal(g.id)}
                       className="text-muted hover:text-rose text-sm px-2"
                       aria-label="Remove">×</button>
@@ -208,7 +209,7 @@ export default function Home({ state, setState }) {
                       className="flex items-center gap-3 flex-1 text-left active:scale-[.99] transition min-w-0"
                       aria-pressed={checked}>
                       <span className={`w-7 h-7 rounded-full border-2 flex items-center justify-center shrink-0 transition ${
-                        checked ? 'bg-moss border-moss text-cream' : 'bg-white border-sand'
+                        checked ? 'bg-dusty border-dusty text-canvas' : 'bg-white border-stone'
                       }`}>
                         {checked && (
                           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
@@ -248,10 +249,10 @@ export default function Home({ state, setState }) {
 
         {editing && (
           <div className="mt-3 flex gap-2 pt-3 border-t border-sand">
-            <input value={draftLabel} onChange={(e) => setDraftLabel(e.target.value)}
+            <MicField value={draftLabel} onChange={(e) => setDraftLabel(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter') addGoal(); }}
               placeholder='Add a goal — e.g. "10 minutes stretching"'
-              className="input flex-1 text-sm"/>
+              wrapperClassName="flex-1" className="input text-sm"/>
             <button onClick={addGoal} disabled={!draftLabel.trim()} className="btn-primary text-sm">Add</button>
           </div>
         )}
@@ -288,7 +289,7 @@ function Celebration({ streak, onClose }) {
   const pieces = useMemo(() => Array.from({ length: 36 }, () => ({
     left: Math.random() * 100,
     drift: (Math.random() - 0.5) * 60,
-    color: ['#7FA88E', '#DDA8A6', '#E5C28A', '#C8E0D2', '#8B7BA0', '#F5DAD7', '#DDD3E8', '#F5E8C0', '#F5D9C0', '#C5DCE5'][Math.floor(Math.random() * 10)],
+    color: ['#C99097', '#E5B7B3', '#E0A38B', '#E5C28A', '#F5DAD7', '#F5D9C0', '#FBE8E4', '#F5E8C0', '#DDD3E8', '#C5DCE5'][Math.floor(Math.random() * 10)],
     delay: Math.random() * 0.4,
     duration: 1.5 + Math.random() * 1.2,
   })), []);
@@ -306,7 +307,7 @@ function Celebration({ streak, onClose }) {
           style={{ left: `${p.left}%`, background: p.color, animationDelay: `${p.delay}s`, animationDuration: `${p.duration}s`, '--drift': `${p.drift}px` }}/>
       ))}
       <div className="card relative pop-in p-6 max-w-sm text-center">
-        <div className="w-20 h-20 mx-auto rounded-full bg-moss text-cream flex items-center justify-center mb-3">
+        <div className="w-20 h-20 mx-auto rounded-full bg-dusty text-canvas flex items-center justify-center mb-3">
           <svg className="tick-draw" width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
             <path d="M5 12l4 4 10-10"/>
           </svg>
@@ -335,7 +336,7 @@ function Last7Days({ state, goals }) {
         return (
           <div key={d.date} className="flex flex-col items-center gap-1">
             <div className={`w-full aspect-square rounded-xl flex items-center justify-center text-xs font-medium
-              ${full ? 'bg-moss text-cream' : pct > 0 ? 'bg-sage/30 text-plum' : 'bg-sand text-muted'}`}>
+              ${full ? 'bg-dusty text-canvas' : pct > 0 ? 'bg-blush text-charcoal' : 'bg-linen text-muted'}`}>
               {d.done}/{d.total || '–'}
             </div>
             <div className="text-[9px] text-muted">{shortDay(d.date)}</div>

@@ -1,4 +1,4 @@
-# Built Different 🤍 — brand-food lookup proxy
+# Built Different — brand-food lookup proxy
 
 The Built Different PWA can talk to an optional **server proxy** that fetches
 nutrition data from Woolworths and manufacturer websites and (optionally)

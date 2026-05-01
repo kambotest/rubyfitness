@@ -23,17 +23,30 @@ const INDEX = FOODS.map((f) => ({
   keys: [f.name, ...(f.aliases || [])].map(norm),
 }));
 
+// Custom foods the user has added at runtime — registered from App.jsx
+// whenever state.customFoods changes. The main INDEX stays static; we
+// merge USER_INDEX in front so user foods win identically-named hits.
+let USER_INDEX = [];
+export function registerCustomFoods(list) {
+  USER_INDEX = (list || []).map((f) => ({
+    food: f,
+    keys: [f.name, ...(f.aliases || [])].map(norm),
+  }));
+}
+function indexes() { return [...USER_INDEX, ...INDEX]; }
+
 export function findFood(query) {
   const q = norm(query);
   if (!q) return null;
+  const idx = indexes();
   // exact alias hit
-  for (const { food, keys } of INDEX) if (keys.includes(q)) return food;
+  for (const { food, keys } of idx) if (keys.includes(q)) return food;
   // starts-with
-  for (const { food, keys } of INDEX) if (keys.some((k) => k.startsWith(q))) return food;
+  for (const { food, keys } of idx) if (keys.some((k) => k.startsWith(q))) return food;
   // contains all words
   const words = q.split(/\s+/).filter(Boolean);
   let best = null, bestScore = 0;
-  for (const { food, keys } of INDEX) {
+  for (const { food, keys } of idx) {
     for (const k of keys) {
       const hits = words.filter((w) => k.includes(w)).length;
       const score = hits / words.length - Math.abs(k.length - q.length) / 200;
@@ -47,7 +60,7 @@ export function searchFoods(query, limit = 8) {
   const q = norm(query);
   if (!q) return [];
   const scored = [];
-  for (const { food, keys } of INDEX) {
+  for (const { food, keys } of indexes()) {
     let s = 0;
     for (const k of keys) {
       if (k === q) s = Math.max(s, 100);

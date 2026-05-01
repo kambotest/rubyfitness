@@ -5,6 +5,7 @@ import {
 } from '../utils/storage.js';
 import { parseAppleHealthExport, mergeAppleHealthIntoState } from '../utils/healthSync.js';
 import { permissionState, requestPermission } from '../utils/notifications.js';
+import MicField from './MicField.jsx';
 
 export default function Settings({ state, setState }) {
   const [draft, setDraft] = useState({
@@ -100,7 +101,7 @@ export default function Settings({ state, setState }) {
         <h2 className="font-display text-lg">About you</h2>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           <Field label="Name">
-            <input value={draft.profile.name} onChange={(e)=>setP('name', e.target.value)} className="input" placeholder="Your name"/>
+            <MicField value={draft.profile.name} onChange={(e)=>setP('name', e.target.value)} className="input" placeholder="Your name"/>
           </Field>
           <Field label="Current weight (kg)">
             <input type="number" step="0.1" value={draft.profile.weightKg} onChange={(e)=>setP('weightKg', +e.target.value)} className="input"/>

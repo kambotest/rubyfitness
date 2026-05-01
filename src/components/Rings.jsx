@@ -1,6 +1,6 @@
 // Compact progress ring for kcal / protein / sugar / hydration etc.
 // Soft palette: faint biscuit track, gentle accent stroke, no shadows.
-export default function Ring({ value, target, label, sub, size = 92, stroke = 8, color = '#7E9777' }) {
+export default function Ring({ value, target, label, sub, size = 92, stroke = 8, color = '#C99097' }) {
   const pct = target > 0 ? Math.min(1, value / target) : 0;
   const r = (size - stroke) / 2;
   const c = 2 * Math.PI * r;

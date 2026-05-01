@@ -6,6 +6,7 @@ import Recipes from './components/Recipes.jsx';
 import Settings from './components/Settings.jsx';
 import { load, save } from './utils/storage.js';
 import { checkAndFire } from './utils/notifications.js';
+import { registerCustomFoods } from './data/foods.js';
 
 const TABS = [
   { id: 'home',     label: 'Home',     icon: HomeIcon },
@@ -20,6 +21,10 @@ export default function App() {
   const [tab, setTab] = useState('home');
 
   useEffect(() => { save(state); }, [state]);
+
+  // Keep the foods index in sync with the user's custom-foods list so
+  // findFood / searchFoods see them without prop drilling.
+  useEffect(() => { registerCustomFoods(state.customFoods); }, [state.customFoods]);
 
   // Run notification triggers every 5 minutes while the app is open.
   useEffect(() => {

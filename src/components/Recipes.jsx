@@ -1,5 +1,6 @@
 import { useMemo, useRef, useState } from 'react';
 import VoiceInput from './VoiceInput.jsx';
+import MicField from './MicField.jsx';
 import { parseFoodTranscript } from '../utils/parser.js';
 import { findFood, nutrientsFor } from '../data/foods.js';
 import { newId, todayISO } from '../utils/storage.js';
@@ -131,7 +132,7 @@ function RecipeBuilder({ state, setState }) {
     <div className="space-y-4">
       <div className="card p-5 space-y-3">
         <div className="grid sm:grid-cols-[2fr_1fr] gap-3">
-          <input value={name} onChange={(e)=>setName(e.target.value)}
+          <MicField value={name} onChange={(e)=>setName(e.target.value)}
             className="input" placeholder="Recipe name (e.g. Salmon power bowl)"/>
           <div className="flex items-center gap-2">
             <label className="text-sm text-muted">Servings</label>
@@ -165,7 +166,7 @@ function RecipeBuilder({ state, setState }) {
           </p>
           {photoText && (
             <div className="mt-2 space-y-2">
-              <textarea value={photoText} onChange={(e) => setPhotoText(e.target.value)}
+              <MicField as="textarea" value={photoText} onChange={(e) => setPhotoText(e.target.value)}
                 rows={4} className="input" placeholder="Edit the extracted ingredients…"/>
               <div className="flex gap-2 justify-end">
                 <button onClick={() => { setPhotoText(''); setPhotoStatus(''); }} className="btn-ghost text-sm">Discard</button>

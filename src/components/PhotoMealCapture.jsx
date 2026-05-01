@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { parseFoodTranscript } from '../utils/parser.js';
+import MicField from './MicField.jsx';
 
 // Snap a photo of a meal now, fill in the macros later. Solves the "I'll
 // log it after I eat" problem that kills most food-tracking attempts.
@@ -73,7 +74,7 @@ export default function PhotoMealCapture({ entry, photoMeals, onResolve, onClose
         )}
 
         <label className="block text-[11px] uppercase tracking-wide text-muted mb-1">Describe what you ate</label>
-        <textarea value={text} onChange={(e) => setText(e.target.value)}
+        <MicField as="textarea" value={text} onChange={(e) => setText(e.target.value)}
           rows={3}
           placeholder='e.g. "150g chicken, 1 cup rice, half an avocado"'
           className="input"/>

@@ -12,13 +12,12 @@ html, body, #root {
 
 body {
   @apply bg-canvas text-ink font-sans antialiased;
-  /* Three pastel washes drift across a warm-neutral canvas — peach top
-     right, mint top left, lavender bottom — each so faint that the
-     overall reading is "warm off-white with hints of colour". */
+  /* Three pink/peach washes drift across the warm-neutral canvas; the
+     overall reading is warm off-white with subtle pink hints. */
   background-image:
-    radial-gradient(900px 500px at 100% -10%, rgba(245,217,192,0.18), transparent 60%),
-    radial-gradient(700px 420px at -10% 18%, rgba(200,224,210,0.16), transparent 60%),
-    radial-gradient(600px 380px at 50% 110%, rgba(221,211,232,0.14), transparent 60%);
+    radial-gradient(900px 500px at 100% -10%, rgba(245,217,192,0.20), transparent 60%),
+    radial-gradient(700px 420px at -10% 18%, rgba(251,232,228,0.30), transparent 60%),
+    radial-gradient(600px 380px at 50% 110%, rgba(229,183,179,0.18), transparent 60%);
   background-attachment: fixed;
 }
 
@@ -28,47 +27,43 @@ body {
   letter-spacing: -0.005em;
 }
 
-/* Cards: linen-on-canvas with a barely-there border + lifted shadow */
 .card {
   @apply bg-white/75 backdrop-blur rounded-3xl shadow-whisper border border-white/70;
 }
 
 .chip {
-  @apply inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-linen text-plum;
+  @apply inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-linen text-charcoal;
 }
 
 .btn {
   @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl font-medium transition active:scale-[.98];
 }
-.btn-primary { @apply btn bg-moss text-canvas hover:bg-[#6e957c]; }
-.btn-soft   { @apply btn bg-blush text-plum hover:bg-[#eecbc6]; }
-.btn-ghost  { @apply btn text-plum hover:bg-blush/55; }
+.btn-primary { @apply btn bg-dusty text-canvas hover:bg-[#bd848b]; }
+.btn-soft   { @apply btn bg-blush text-charcoal hover:bg-[#eecbc6]; }
+.btn-ghost  { @apply btn text-charcoal hover:bg-blush/55; }
 
 .input {
-  @apply w-full bg-white/85 border border-stone rounded-2xl px-4 py-3 text-ink placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-sage/70;
+  @apply w-full bg-white/85 border border-stone rounded-2xl px-4 py-3 text-ink placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-rose/60;
 }
 
-/* Scrollbar — barely visible on canvas */
 ::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-thumb { background: #E5E1D8; border-radius: 999px; }
 ::-webkit-scrollbar-thumb:hover { background: #B6AEA0; }
 
-/* Mic pulse */
+/* Mic pulse — warm rose */
 @keyframes pulse-ring {
-  0%   { box-shadow: 0 0 0 0 rgba(127,168,142,0.55); }
-  80%  { box-shadow: 0 0 0 18px rgba(127,168,142,0); }
-  100% { box-shadow: 0 0 0 0 rgba(127,168,142,0); }
+  0%   { box-shadow: 0 0 0 0 rgba(201,144,151,0.55); }
+  80%  { box-shadow: 0 0 0 18px rgba(201,144,151,0); }
+  100% { box-shadow: 0 0 0 0 rgba(201,144,151,0); }
 }
 .recording { animation: pulse-ring 1.5s infinite; }
 
-/* Subtle entrance */
 @keyframes fade-up {
   from { opacity: 0; transform: translateY(6px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 .fade-up { animation: fade-up .35s ease-out both; }
 
-/* Goals-complete celebration */
 @keyframes confetti-fall {
   0%   { transform: translate3d(0, -10vh, 0) rotate(0deg);   opacity: 1; }
   100% { transform: translate3d(var(--drift, 0), 110vh, 0) rotate(720deg); opacity: 0; }
@@ -101,11 +96,10 @@ body {
 
 .celebrate-glow {
   background:
-    radial-gradient(140px 80px at 50% 0%,    rgba(200,224,210,0.45), transparent 70%),
-    radial-gradient(180px 120px at 50% 100%, rgba(245,218,215,0.32), transparent 70%);
+    radial-gradient(140px 80px at 50% 0%,    rgba(245,218,215,0.55), transparent 70%),
+    radial-gradient(180px 120px at 50% 100%, rgba(229,183,179,0.32), transparent 70%);
 }
 
-/* Modal / overlay backdrop — warm scrim, not pure black */
 .overlay {
   background: rgba(42, 40, 35, 0.42);
   backdrop-filter: blur(6px);

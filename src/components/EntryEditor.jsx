@@ -13,10 +13,13 @@ export default function EntryEditor({
   const brandFood = isBrand ? (findBrandFoodById(entry.brandFoodId) || cachedBrands[entry.brandFoodId]) : null;
   const genericFood = !isBrand ? findFood(entry.name) : null;
 
-  // Initialise editor state from the entry. For brand foods we default to
-  // grams (entry.unit is always 'g' or 'ml' for brands) so the user can
-  // tweak without first guessing the original mode.
-  const [mode, setMode] = useState(isBrand ? entry.unit : entry.unit);
+  // For generic foods that have a pieceGrams attribute (e.g.
+  // blackberries with pieceGrams=5), let the user toggle between
+  // weighing in grams and counting whole pieces. Pieces stays a UI
+  // concept — we always store grams/ml on the entry.
+  const hasPieces = !isBrand && genericFood?.pieceGrams && genericFood.unit !== 'piece';
+
+  const [mode, setMode] = useState(entry.unit);
   const [amount, setAmount] = useState(entry.amount);
   const [meal, setMeal] = useState(entry.meal || 'meal');
 
@@ -26,18 +29,30 @@ export default function EntryEditor({
     setMeal(entry.meal || 'meal');
   }, [entry.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Recompute macros live as the user adjusts.
+  // Translate the current (mode, amount) pair into (foodUnit, foodAmount)
+  // for the nutrient calculation.
+  const computeArgs = () => {
+    if (isBrand) return { useAmount: Number(amount), useUnit: mode };
+    if (!genericFood) return null;
+    if (mode === 'pieces' && genericFood.pieceGrams) {
+      return { useAmount: Number(amount) * genericFood.pieceGrams, useUnit: genericFood.unit };
+    }
+    return { useAmount: Number(amount), useUnit: mode || genericFood.unit };
+  };
+
   const recomputed = useMemo(() => {
     if (!Number.isFinite(Number(amount)) || amount === '' || amount <= 0) return null;
     if (isBrand && brandFood) return calcMacros(brandFood, Number(amount), mode);
     if (!isBrand && genericFood) {
-      const m = nutrientsFor(genericFood, Number(amount), mode || genericFood.unit);
-      return { ...m, grams: Number(amount) };
+      const args = computeArgs();
+      const m = nutrientsFor(genericFood, args.useAmount, args.useUnit);
+      return { ...m, grams: args.useAmount };
     }
     return null;
   }, [amount, mode, brandFood, genericFood, isBrand]);
 
-  const stepSize = mode === 'serving' || mode === 'package' ? 0.5 : (mode === 'piece' ? 1 : 10);
+  const stepSize = mode === 'serving' || mode === 'package' ? 0.5
+    : (mode === 'piece' || mode === 'pieces') ? 1 : 10;
 
   const save = () => {
     if (!recomputed) return;
@@ -56,8 +71,9 @@ export default function EntryEditor({
       updated.satFat = recomputed.satFat;
       updated.sodium = recomputed.sodium;
     } else if (genericFood) {
-      updated.amount = Number(amount);
-      updated.unit = mode;
+      const args = computeArgs();
+      updated.amount = args.useAmount;
+      updated.unit = args.useUnit;
       updated.kcal = recomputed.kcal;
       updated.protein = recomputed.protein;
       updated.carbs = recomputed.carbs;
@@ -97,6 +113,24 @@ export default function EntryEditor({
                   {brandFood.serving.unit === 'g' ? 'Grams' : 'mL'}
                 </ModeBtn>
                 <ModeBtn id="package" current={mode} setMode={(m) => { setMode(m); setAmount(1); }}>Pack</ModeBtn>
+              </div>
+            )}
+            {hasPieces && (
+              <div className="flex gap-1.5 mb-3">
+                <ModeBtn id={genericFood.unit} current={mode}
+                  setMode={(m) => {
+                    if (mode === 'pieces') setAmount((a) => Math.round(Number(a) * genericFood.pieceGrams));
+                    setMode(m);
+                  }}>
+                  {genericFood.unit === 'g' ? 'Grams' : 'mL'}
+                </ModeBtn>
+                <ModeBtn id="pieces" current={mode}
+                  setMode={(m) => {
+                    if (mode !== 'pieces') setAmount((a) => Math.max(1, Math.round(Number(a) / genericFood.pieceGrams)));
+                    setMode(m);
+                  }}>
+                  Pieces
+                </ModeBtn>
               </div>
             )}
 
@@ -183,5 +217,6 @@ function unitLabel(mode, amount) {
   if (mode === 'serving') return Number(amount) === 1 ? 'serve' : 'serves';
   if (mode === 'package') return Number(amount) === 1 ? 'pack' : 'packs';
   if (mode === 'piece')   return Number(amount) === 1 ? 'piece' : 'pieces';
+  if (mode === 'pieces')  return Number(amount) === 1 ? 'piece' : 'pieces';
   return mode;
 }
