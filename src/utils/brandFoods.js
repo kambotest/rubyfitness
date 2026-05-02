@@ -123,7 +123,7 @@ function isSameUnit(a, b) {
 // mode: 'g' | 'ml' | 'serving' | 'package'
 export function calcMacros(food, amount, mode = 'serving') {
   if (!food || !Number.isFinite(amount) || amount <= 0) {
-    return { grams: 0, kcal: 0, protein: 0, carbs: 0, sugars: 0, fat: 0, satFat: 0, fiber: 0, sodium: 0 };
+    return { grams: 0, kcal: 0, protein: 0, carbs: 0, sugars: 0, freeSugars: 0, fat: 0, satFat: 0, fiber: 0, sodium: 0 };
   }
   let grams;
   if (mode === 'g' || mode === 'ml') grams = amount;
@@ -133,17 +133,81 @@ export function calcMacros(food, amount, mode = 'serving') {
 
   const f = grams / 100;
   const r1 = (n) => Math.round((n || 0) * f * 10) / 10;
+  const sugars = r1(food.per100.sugars);
   return {
     grams: Math.round(grams * 10) / 10,
     kcal: Math.round((food.per100.kcal || 0) * f),
     protein: r1(food.per100.protein),
     carbs: r1(food.per100.carbs),
-    sugars: r1(food.per100.sugars),
+    sugars,
+    freeSugars: Math.round(sugars * brandFreeSugarFraction(food) * 10) / 10,
     fat: r1(food.per100.fat),
     satFat: r1(food.per100.satFat),
     fiber: r1(food.per100.fiber),
     sodium: Math.round((food.per100.sodium || 0) * f),
   };
+}
+
+// Per-product free-sugar fraction. Most curated entries are tagged
+// directly in data/brandFoods.au.js; we fall back here for items
+// that haven't been tagged yet (e.g. proxy or OFF results).
+const BRAND_FREE_SUGAR_DEFAULTS = {
+  // Plain dairy / cheese — intrinsic only
+  farmers_union_greek_natural: 0,
+  chobani_greek_plain: 0,
+  jalna_greek_natural: 0,
+  pauls_smarter_white_milk: 0,
+  mainland_tasty_cheese: 0,
+  bega_stringers: 0,
+  // Sweetened dairy / drinks
+  chobani_fit_vanilla: 1,
+  yopro_vanilla: 1,
+  sanitarium_upngo_choc_ice: 1,
+  vitasoy_soy_milky_lite: 0.4,
+  sogood_almond_unsweetened: 0,
+  farmers_union_iced_coffee: 1,
+  coca_cola_classic: 1,
+  coca_cola_no_sugar: 0,           // negligible sugars anyway
+  // Bread / cereal
+  sanitarium_weetbix_original: 0.5,
+  helgas_wholemeal_mixed_grain: 0.6,
+  tiptop_sunblest_white: 1,
+  mountain_bread_wholemeal_wraps: 0.4,
+  uncle_tobys_quick_oats: 0,
+  carmans_original_muesli: 0.6,
+  // Snacks (essentially all free)
+  arnotts_tim_tam_original: 1,
+  arnotts_salada_original: 0.8,
+  cobs_lightly_salted_popcorn: 0,
+  bounce_almond_protein_ball: 1,
+  lindt_excellence_70: 1,
+  // Spreads / pantry
+  vegemite: 0,
+  mayver_smooth_peanut_butter: 0,
+  anchor_butter: 0,
+  // Fresh
+  woolworths_australian_eggs_large: 0,
+  sunrice_jasmine_microwave: 0,
+};
+function brandFreeSugarFraction(food) {
+  if (!food) return 1;
+  if (food.freeSugarFraction != null) return food.freeSugarFraction;
+  if (food.id && BRAND_FREE_SUGAR_DEFAULTS[food.id] != null) return BRAND_FREE_SUGAR_DEFAULTS[food.id];
+  // Group-based fallback for live-lookup items.
+  switch (food.group) {
+    case 'dairy':     return 0.4;
+    case 'fruit':     return 0;
+    case 'veg':       return 0;
+    case 'protein':   return 0;
+    case 'fat':       return 0;
+    case 'snack':     return 1;
+    case 'beverage':  return 1;
+    case 'condiment': return 1;
+    case 'mixed':     return 0.6;
+    case 'grain':     return 0.5;
+    case 'legume':    return 0;
+    default:          return 1;
+  }
 }
 
 // ---- Runtime QA/QC ----

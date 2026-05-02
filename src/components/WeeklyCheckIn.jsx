@@ -56,8 +56,8 @@ export default function WeeklyCheckIn({ state, setState, onClose, today }) {
                 accent={Math.abs(data.avgKcal - target) < target * 0.1 ? 'positive' : 'attention'}/>
           <Stat label="Avg protein" value={`${Math.round(data.avgProtein)}g`} sub={`target ${macros.protein}g`}
                 accent={data.avgProtein >= macros.protein * 0.9 ? 'positive' : 'attention'}/>
-          <Stat label="Avg sugar" value={`${Math.round(data.avgSugar)}g`} sub={`cap ${state.goals?.sugarG || 25}g`}
-                accent={data.avgSugar <= (state.goals?.sugarG || 25) * 1.05 ? 'positive' : 'attention'}/>
+          <Stat label="Avg free sugar" value={`${Math.round(data.avgFreeSugar)}g`} sub={`cap ${state.goals?.sugarG || 25}g`}
+                accent={data.avgFreeSugar <= (state.goals?.sugarG || 25) * 1.05 ? 'positive' : 'attention'}/>
           <Stat label="Plants" value={data.plantCount} sub={`target ${state.goals?.plantsPerWeek || 50}`}
                 accent={data.plantCount >= (state.goals?.plantsPerWeek || 50) * 0.85 ? 'positive' : 'attention'}/>
           <Stat label="Avg hydration" value={`${Math.round(data.avgHydration)} mL`} sub={`target ${state.goals?.hydrationMl || 2500}`}
@@ -129,10 +129,11 @@ function computeStats(state, today) {
       acc.kcal += e.kcal || 0;
       acc.protein += e.protein || 0;
       acc.sugar += e.sugars || 0;
+      acc.freeSugar += (e.freeSugars != null ? e.freeSugars : (e.sugars || 0));
       acc.fiber += e.fiber || 0;
       return acc;
     },
-    { kcal: 0, protein: 0, sugar: 0, fiber: 0 }
+    { kcal: 0, protein: 0, sugar: 0, freeSugar: 0, fiber: 0 }
   );
 
   const goals = state.dailyGoals || [];
@@ -174,6 +175,7 @@ function computeStats(state, today) {
     avgKcal: totals.kcal / dayCount,
     avgProtein: totals.protein / dayCount,
     avgSugar: totals.sugar / dayCount,
+    avgFreeSugar: totals.freeSugar / dayCount,
     avgFiber: totals.fiber / dayCount,
     avgHydration,
     plantCount: plants.plants.length,
@@ -189,9 +191,9 @@ function buildSuggestions(state, data, macros, target) {
   const plantsTarget = state.goals?.plantsPerWeek || 50;
   const hydrationTarget = state.goals?.hydrationMl || 2500;
 
-  if (data.avgSugar > sugarCap * 1.2) {
+  if (data.avgFreeSugar > sugarCap * 1.2) {
     out.push({
-      text: `Sugar averaged ${Math.round(data.avgSugar)}g — well above your ${sugarCap}g cap. Hold the cap or raise it slightly while you adjust.`,
+      text: `Free sugar averaged ${Math.round(data.avgFreeSugar)}g — well above your ${sugarCap}g cap. Hold the cap or raise it slightly while you adjust.`,
     });
   }
   if (data.avgProtein < macros.protein * 0.85) {

@@ -68,6 +68,7 @@ export default function EntryEditor({
       updated.fat = recomputed.fat;
       updated.fiber = recomputed.fiber;
       updated.sugars = recomputed.sugars;
+      updated.freeSugars = recomputed.freeSugars;
       updated.satFat = recomputed.satFat;
       updated.sodium = recomputed.sodium;
     } else if (genericFood) {
@@ -80,6 +81,7 @@ export default function EntryEditor({
       updated.fat = recomputed.fat;
       updated.fiber = recomputed.fiber;
       updated.sugars = recomputed.sugars;
+      updated.freeSugars = recomputed.freeSugars;
     }
     updated.meal = meal;
     onSave?.(updated);
@@ -157,7 +159,10 @@ export default function EntryEditor({
               <div className="grid grid-cols-3 gap-2 mt-3">
                 <Cell label="kcal" value={recomputed.kcal} accent/>
                 <Cell label="Protein" value={`${recomputed.protein}g`}/>
-                <Cell label="Carbs" value={`${recomputed.carbs}g`} sub={recomputed.sugars > 0 ? `${recomputed.sugars}g sugar` : null}/>
+                <Cell label="Carbs" value={`${recomputed.carbs}g`}
+                  sub={recomputed.sugars > 0
+                    ? `${recomputed.sugars}g sugar${recomputed.freeSugars && recomputed.freeSugars !== recomputed.sugars ? ` (${recomputed.freeSugars}g free)` : ''}`
+                    : null}/>
                 <Cell label="Fat" value={`${recomputed.fat}g`} sub={recomputed.satFat > 0 ? `${recomputed.satFat}g sat` : null}/>
                 <Cell label="Fibre" value={`${recomputed.fiber}g`}/>
                 {isBrand && <Cell label="Sodium" value={`${recomputed.sodium}mg`}/>}

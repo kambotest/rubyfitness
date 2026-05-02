@@ -180,7 +180,7 @@ export function parseFoodItem(raw) {
         amount: Math.round(grams * 10) / 10,
         unit: brandHit.serving.unit,
         kcal: m.kcal, protein: m.protein, carbs: m.carbs, fat: m.fat,
-        fiber: m.fiber, sugars: m.sugars, satFat: m.satFat, sodium: m.sodium,
+        fiber: m.fiber, sugars: m.sugars, freeSugars: m.freeSugars, satFat: m.satFat, sodium: m.sodium,
         raw,
       };
     }

@@ -179,7 +179,7 @@ export default function Settings({ state, setState }) {
           <Field label="Fibre target (g/day)">
             <input type="number" value={draft.goals.fiberG} onChange={(e)=>setG('fiberG', +e.target.value)} className="input"/>
           </Field>
-          <Field label="Sugar cap (g/day)">
+          <Field label="Free sugar cap (g/day)">
             <input type="number" value={draft.goals.sugarG} onChange={(e)=>setG('sugarG', +e.target.value)} className="input"/>
           </Field>
           <Field label="Distinct plants per week">
@@ -192,8 +192,11 @@ export default function Settings({ state, setState }) {
           </Field>
         </div>
         <p className="text-[11px] text-muted">
-          Sugar cap defaults to 25 g (American Heart Association recommendation for women, also aligned with WHO &lt;10% energy
-          for added sugars). Lower caps (≤20 g) are appropriate when targeting HbA1c reduction.
+          The Sugar ring tracks <em>free sugars</em> only — added sugars plus sugars in honey, syrups,
+          fruit juices and dried fruit per the WHO definition. Naturally occurring sugars in whole
+          fruit, vegetables and plain dairy don't count toward this cap. Default 25 g/day matches
+          the American Heart Association guideline for women and the WHO &lt;10% energy target.
+          Lower caps (≤20 g) suit HbA1c reduction.
         </p>
       </section>
 

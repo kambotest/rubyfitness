@@ -53,7 +53,7 @@ export default function ServingCalculator({
       unit: measureUnit,
       kcal: macros.kcal, protein: macros.protein, carbs: macros.carbs,
       fat: macros.fat, fiber: macros.fiber, sodium: macros.sodium,
-      sugars: macros.sugars, satFat: macros.satFat,
+      sugars: macros.sugars, freeSugars: macros.freeSugars, satFat: macros.satFat,
       meal,
       raw: `Brand search · ${displayAmount(amount, mode, food)}`,
       // Pass usage + the full food object so parent can persist usage and

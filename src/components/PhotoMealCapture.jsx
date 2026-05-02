@@ -32,14 +32,15 @@ export default function PhotoMealCapture({ entry, photoMeals, onResolve, onClose
     // like "150g chicken, 1 cup rice, half avocado" lands as one entry.
     const summed = items.reduce(
       (acc, i) => ({
-        kcal: acc.kcal + (i.kcal || 0),
-        protein: round1(acc.protein + (i.protein || 0)),
-        carbs:   round1(acc.carbs   + (i.carbs   || 0)),
-        fat:     round1(acc.fat     + (i.fat     || 0)),
-        fiber:   round1(acc.fiber   + (i.fiber   || 0)),
-        sugars:  round1(acc.sugars  + (i.sugars  || 0)),
+        kcal:       acc.kcal + (i.kcal || 0),
+        protein:    round1(acc.protein    + (i.protein    || 0)),
+        carbs:      round1(acc.carbs      + (i.carbs      || 0)),
+        fat:        round1(acc.fat        + (i.fat        || 0)),
+        fiber:      round1(acc.fiber      + (i.fiber      || 0)),
+        sugars:     round1(acc.sugars     + (i.sugars     || 0)),
+        freeSugars: round1(acc.freeSugars + (i.freeSugars != null ? i.freeSugars : (i.sugars || 0))),
       }),
-      { kcal: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, sugars: 0 }
+      { kcal: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, sugars: 0, freeSugars: 0 }
     );
     const name = items.length === 1 ? items[0].name : `${items[0].name} + ${items.length - 1} more`;
     const merged = {

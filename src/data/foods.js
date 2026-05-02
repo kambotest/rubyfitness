@@ -75,7 +75,7 @@ export function searchFoods(query, limit = 8) {
 // Compute kcal/macros for an arbitrary amount.
 // amount is interpreted in `unit` (g, ml, or piece).
 export function nutrientsFor(food, amount, unit) {
-  if (!food) return { kcal: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, sugars: 0 };
+  if (!food) return { kcal: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, sugars: 0, freeSugars: 0 };
   let factor;
   if (food.unit === 'piece') {
     if (unit === 'piece') factor = amount / food.per;
@@ -87,13 +87,15 @@ export function nutrientsFor(food, amount, unit) {
   }
   const m = (k) => Math.round(((food[k] || 0) * factor) * 10) / 10;
   const carbs = m('carbs');
+  const sugars = estimateSugars(food, carbs);
   return {
     kcal: Math.round((food.kcal || 0) * factor),
     protein: m('protein'),
     carbs,
     fat: m('fat'),
     fiber: m('fiber'),
-    sugars: estimateSugars(food, carbs),
+    sugars,
+    freeSugars: Math.round(sugars * freeSugarFraction(food) * 10) / 10,
     group: food.group,
   };
 }
@@ -109,4 +111,49 @@ export function estimateSugars(food, carbsG) {
   if (food.sugars != null) return Math.round(food.sugars * 10) / 10;
   const r = SUGAR_RATIO[food.group] ?? 0.10;
   return Math.round((carbsG || 0) * r * 10) / 10;
+}
+
+// Free-sugar fraction = portion of total sugars that are ADDED or
+// otherwise "free" per WHO definition (added during processing, plus
+// sugars naturally present in honey, syrups, fruit juices, fruit juice
+// concentrates, dried fruit). Whole fruit, plain dairy, and vegetables
+// contribute "intrinsic" sugars that are NOT free.
+//
+// 0 = fully intrinsic; 1 = fully free.
+//
+// The 25 g/day cap defaulted in goals applies to FREE sugars only — this
+// helper is what makes the Sugar ring a meaningful target.
+const FREE_SUGAR_OVERRIDES = {
+  // Fruit but processed → free
+  orange_juice: 1, apple_juice: 1,
+  raisins: 1, sultanas: 1, dried_apricot: 1, dried_cranberries: 1,
+  dates: 0.7,
+  // Plain dairy → intrinsic lactose only
+  yogurt_natural: 0, yogurt_greek: 0, milk_full: 0, milk_skim: 0,
+  milk_almond: 0, cottage_cheese: 0,
+  // Sweetened plant milks
+  milk_oat: 0.4,  milk_soy: 0.3,
+  // Condiments / syrups → free
+  honey: 1, maple_syrup: 1, jam: 1, sugar: 1, tomato_sauce: 0.8,
+  // Beverages
+  kombucha: 0.7, smoothie_berry: 0.4,
+};
+export function freeSugarFraction(food) {
+  if (!food) return 1;
+  if (food.freeSugarFraction != null) return food.freeSugarFraction; // brand foods carry this directly
+  if (food.id && FREE_SUGAR_OVERRIDES[food.id] != null) return FREE_SUGAR_OVERRIDES[food.id];
+  switch (food.group) {
+    case 'fruit':     return 0;     // whole fruit
+    case 'veg':       return 0;
+    case 'legume':    return 0;
+    case 'protein':   return 0;
+    case 'fat':       return 0;
+    case 'dairy':     return 0.2;   // most plain; sweetened items override
+    case 'grain':     return 0.4;   // sugars in grains are partly added
+    case 'snack':     return 1;
+    case 'beverage':  return 1;
+    case 'condiment': return 1;
+    case 'mixed':     return 0.5;
+    default:          return 1;
+  }
 }

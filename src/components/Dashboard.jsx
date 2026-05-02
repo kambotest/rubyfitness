@@ -43,11 +43,13 @@ export default function Dashboard({ state, setState }) {
   );
 
   const totals = useMemo(() => {
-    const t = { kcal: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, sugars: 0 };
+    const t = { kcal: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, sugars: 0, freeSugars: 0 };
     dayFood.forEach((e) => {
       t.kcal += e.kcal; t.protein += e.protein; t.carbs += e.carbs;
       t.fat += e.fat; t.fiber += e.fiber;
       t.sugars += (e.sugars || 0);
+      // Fall back to total sugars if a legacy entry doesn't carry freeSugars yet.
+      t.freeSugars += (e.freeSugars != null ? e.freeSugars : (e.sugars || 0));
     });
     return t;
   }, [dayFood]);
@@ -324,11 +326,11 @@ export default function Dashboard({ state, setState }) {
           <Ring value={totals.protein} target={proteinT} label="Protein"  sub="g"                 color="#E0A38B"/>
           <Ring value={totals.fiber}   target={fiberT}   label="Fibre"    sub="g"                 color="#E5C28A"/>
           <Ring
-            value={Math.round(totals.sugars * 10) / 10}
+            value={Math.round(totals.freeSugars * 10) / 10}
             target={sugarT}
-            label="Sugar"
+            label="Free sugar"
             sub={`/ ${sugarT}g cap`}
-            color={totals.sugars >= sugarT ? '#B6757B' : '#E5B7B3'}
+            color={totals.freeSugars >= sugarT ? '#B6757B' : '#E5B7B3'}
           />
           <Ring value={weekPlants.plants.length} target={plantsTarget}
             label="Plants" sub="this week" color="#9BC2A8"/>

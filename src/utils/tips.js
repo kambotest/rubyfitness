@@ -61,11 +61,12 @@ export function tipForToday(state, today) {
 
   // 4. Sugar trending high.
   const sugarCap = state.goals?.sugarG || 25;
-  const sugarAvg = avgPerDay(week, 'sugars');
-  if (sugarAvg > sugarCap * 1.15) {
+  // freeSugars when present, otherwise fall back to total (legacy entries)
+  const freeSugarAvg = avgPerDay(week, 'freeSugars', 'sugars');
+  if (freeSugarAvg > sugarCap * 1.15) {
     return {
       kind: 'sugar',
-      text: `Sugar's averaged ${Math.round(sugarAvg)}g/day this week, above your ${sugarCap}g cap. Pick whole-food snacks today.`,
+      text: `Free sugars have averaged ${Math.round(freeSugarAvg)}g/day this week, above your ${sugarCap}g cap. Pick whole-food snacks today.`,
       accent: 'attention',
     };
   }
@@ -121,11 +122,12 @@ export function tipForToday(state, today) {
   };
 }
 
-function avgPerDay(entries, field) {
+function avgPerDay(entries, field, fallbackField) {
   if (!entries.length) return 0;
   const totals = {};
   for (const e of entries) {
-    totals[e.date] = (totals[e.date] || 0) + (e[field] || 0);
+    const v = e[field] != null ? e[field] : (fallbackField ? (e[fallbackField] || 0) : 0);
+    totals[e.date] = (totals[e.date] || 0) + v;
   }
   const days = Object.keys(totals);
   if (!days.length) return 0;
