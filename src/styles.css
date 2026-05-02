@@ -11,46 +11,47 @@ html, body, #root {
 }
 
 body {
+  /* One subtle wash, not three — keeps the canvas reading as warm
+     off-white without feeling decorative. */
   @apply bg-canvas text-ink font-sans antialiased;
-  /* Three pink/peach washes drift across the warm-neutral canvas; the
-     overall reading is warm off-white with subtle pink hints. */
   background-image:
-    radial-gradient(900px 500px at 100% -10%, rgba(245,217,192,0.20), transparent 60%),
-    radial-gradient(700px 420px at -10% 18%, rgba(251,232,228,0.30), transparent 60%),
-    radial-gradient(600px 380px at 50% 110%, rgba(229,183,179,0.18), transparent 60%);
+    radial-gradient(1100px 600px at 100% -10%, rgba(245,218,215,0.18), transparent 65%);
   background-attachment: fixed;
 }
 
 .font-display {
   font-family: 'Fraunces', ui-serif, Georgia, serif;
   font-weight: 400;
-  letter-spacing: -0.005em;
+  letter-spacing: -0.012em;
 }
 
+/* Cards: thin border, no blur, light shadow only on hover/active. */
 .card {
-  @apply bg-white/75 backdrop-blur rounded-3xl shadow-whisper border border-white/70;
+  @apply bg-white/90 rounded-2xl border border-stone;
 }
 
 .chip {
-  @apply inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-linen text-charcoal;
+  @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-linen text-charcoal border border-stone;
 }
 
 .btn {
-  @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl font-medium transition active:scale-[.98];
+  @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition active:scale-[.98];
 }
 .btn-primary { @apply btn bg-dusty text-canvas hover:bg-[#bd848b]; }
 .btn-soft   { @apply btn bg-blush text-charcoal hover:bg-[#eecbc6]; }
-.btn-ghost  { @apply btn text-charcoal hover:bg-blush/55; }
+.btn-ghost  { @apply btn text-charcoal hover:bg-blush/50; }
+.btn-outline { @apply btn bg-transparent border border-stone text-charcoal hover:bg-linen; }
 
 .input {
-  @apply w-full bg-white/85 border border-stone rounded-2xl px-4 py-3 text-ink placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-rose/60;
+  @apply w-full bg-white border border-stone rounded-xl px-3.5 py-2.5 text-ink placeholder:text-muted
+         focus:outline-none focus:border-dusty focus:ring-1 focus:ring-dusty/40;
 }
 
 ::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-thumb { background: #E5E1D8; border-radius: 999px; }
 ::-webkit-scrollbar-thumb:hover { background: #B6AEA0; }
 
-/* Mic pulse — warm rose */
+/* Mic pulse */
 @keyframes pulse-ring {
   0%   { box-shadow: 0 0 0 0 rgba(201,144,151,0.55); }
   80%  { box-shadow: 0 0 0 18px rgba(201,144,151,0); }
@@ -62,7 +63,7 @@ body {
   from { opacity: 0; transform: translateY(6px); }
   to   { opacity: 1; transform: translateY(0); }
 }
-.fade-up { animation: fade-up .35s ease-out both; }
+.fade-up { animation: fade-up .3s ease-out both; }
 
 @keyframes confetti-fall {
   0%   { transform: translate3d(0, -10vh, 0) rotate(0deg);   opacity: 1; }
@@ -104,3 +105,6 @@ body {
   background: rgba(42, 40, 35, 0.42);
   backdrop-filter: blur(6px);
 }
+
+/* Section dividers — McMaster-style hairline */
+.divide-hair > * + * { border-top: 1px solid #E5E1D8; }

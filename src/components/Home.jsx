@@ -4,6 +4,7 @@ import { quoteForDate } from '../data/quotes.js';
 import { tipForToday } from '../utils/tips.js';
 import WeeklyCheckIn from './WeeklyCheckIn.jsx';
 import MicField from './MicField.jsx';
+import { useUndo } from './UndoToast.jsx';
 
 // Landing screen. Shows the brand wordmark, today's data-driven tip,
 // a daily-rotating quote, and the full goal checklist (with timers and
@@ -15,6 +16,7 @@ export default function Home({ state, setState }) {
   const [draftLabel, setDraftLabel] = useState('');
   const [now, setNow] = useState(Date.now());
 
+  const { offerUndo } = useUndo();
   const goals = state.dailyGoals || [];
   const checksToday = state.dailyChecks?.[date] || {};
   const doneCount = goals.reduce((n, g) => n + (checksToday[g.id] ? 1 : 0), 0);
@@ -107,8 +109,16 @@ export default function Home({ state, setState }) {
 
   const updateLabel = (id, label) =>
     setState((s) => ({ ...s, dailyGoals: (s.dailyGoals || []).map((g) => (g.id === id ? { ...g, label } : g)) }));
-  const removeGoal = (id) =>
-    setState((s) => ({ ...s, dailyGoals: (s.dailyGoals || []).filter((g) => g.id !== id) }));
+  const removeGoal = (id) => {
+    let removed;
+    setState((s) => {
+      removed = (s.dailyGoals || []).find((g) => g.id === id);
+      return { ...s, dailyGoals: (s.dailyGoals || []).filter((g) => g.id !== id) };
+    });
+    if (removed) offerUndo(`Removed "${removed.label}"`, () => {
+      setState((s) => ({ ...s, dailyGoals: [...(s.dailyGoals || []), removed] }));
+    });
+  };
   const addGoal = () => {
     const label = draftLabel.trim();
     if (!label) return;
@@ -116,7 +126,10 @@ export default function Home({ state, setState }) {
     setDraftLabel('');
   };
 
-  const streak = useMemo(() => computeStreak(state.dailyChecks || {}, goals, date), [state.dailyChecks, goals, date]);
+  const { streak, restAvailableThisWeek } = useMemo(
+    () => computeStreak(state.dailyChecks || {}, goals, date),
+    [state.dailyChecks, goals, date]
+  );
 
   // Celebration: only on a fresh transition, only once per (date, session).
   const [celebrating, setCelebrating] = useState(false);
@@ -174,7 +187,14 @@ export default function Home({ state, setState }) {
           <div>
             <p className="text-[10px] uppercase tracking-widest text-muted">Daily goals</p>
             <div className="font-display text-2xl">{doneCount}<span className="text-muted text-base"> / {goals.length}</span></div>
-            <div className="text-xs text-muted">{streak > 0 ? `${streak}-day streak` : 'No streak'}</div>
+            <div className="text-xs text-muted">
+              {streak > 0 ? `${streak}-day streak` : 'No streak'}
+              {streak > 0 && (
+                <span className={`ml-2 ${restAvailableThisWeek ? 'text-moss' : 'text-mushroom'}`}>
+                  · {restAvailableThisWeek ? 'rest day available' : 'rest day used'}
+                </span>
+              )}
+            </div>
           </div>
           <div className="flex gap-2">
             <button onClick={clearAll} className="btn-ghost text-xs">Clear</button>
@@ -365,20 +385,52 @@ function fmtTime(sec) {
   const r = s % 60;
   return `${m}:${String(r).padStart(2, '0')}`;
 }
+// Streak counter with one-rest-day-per-ISO-week grace. Walks backwards
+// day by day from `fromDate`. A complete day always extends the streak;
+// an incomplete day is absorbed once per ISO week (the first time we
+// encounter one in that week). The second incomplete day in the same
+// week breaks the streak. Returns { streak, restAvailableThisWeek } so
+// the UI can surface whether a grace day is still in the bank.
 function computeStreak(checks, goals, fromDate) {
-  if (!goals.length) return 0;
+  if (!goals.length) return { streak: 0, restAvailableThisWeek: false };
+  const allDone = (iso) => goals.every((g) => (checks[iso] || {})[g.id]);
+
   let streak = 0;
-  const today = checks[fromDate] || {};
-  if (goals.every((g) => today[g.id])) streak += 1;
+  const restUsedByWeek = new Set();
   const cursor = new Date(fromDate + 'T00:00');
+
+  // Today first
+  if (allDone(fromDate)) {
+    streak += 1;
+  } else {
+    // Today's not done — eligible to be the rest day for this ISO week,
+    // but only if the user has logged at least *some* progress today;
+    // otherwise we don't want a brand-new day to be "spent" silently.
+    // We still check the streak-rest rule though so prior days carry.
+  }
+
   for (let i = 1; i <= 365; i++) {
     const d = new Date(cursor);
     d.setDate(d.getDate() - i);
     const iso = d.toISOString().slice(0, 10);
-    if (!goals.every((g) => (checks[iso] || {})[g.id])) break;
-    streak += 1;
+    const wk = isoWeek(d);
+    if (allDone(iso)) {
+      streak += 1;
+      continue;
+    }
+    if (!restUsedByWeek.has(wk)) {
+      restUsedByWeek.add(wk);
+      // Rest day absorbs this incomplete day; streak continues but the
+      // skipped day is NOT counted.
+      continue;
+    }
+    break;
   }
-  return streak;
+
+  // Did we use the rest day for THIS week already?
+  const thisWeek = isoWeek(new Date(fromDate + 'T00:00'));
+  const restAvailableThisWeek = !restUsedByWeek.has(thisWeek);
+  return { streak, restAvailableThisWeek };
 }
 function prettyDate(iso) {
   return new Date(iso + 'T00:00').toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' });

@@ -5,7 +5,7 @@
 //
 // Rules are evaluated in priority order; the first matching rule wins.
 
-import { isoDaysAgo } from './storage.js';
+import { isoDaysAgo, isoWeek } from './storage.js';
 import { aggregatePlants } from '../data/plants.js';
 import { macroTargets } from './storage.js';
 
@@ -134,19 +134,22 @@ function avgPerDay(entries, field, fallbackField) {
   return days.reduce((s, d) => s + totals[d], 0) / days.length;
 }
 
+// Same logic as Home.computeStreak — one rest-day-per-ISO-week grace.
 function currentStreak(checks, goals, today) {
   if (!goals.length) return 0;
+  const allDone = (iso) => goals.every((g) => (checks[iso] || {})[g.id]);
   let streak = 0;
-  const todayDone = goals.every((g) => (checks[today] || {})[g.id]);
-  if (todayDone) streak += 1;
+  const restUsedByWeek = new Set();
   const cursor = new Date(today + 'T00:00');
+  if (allDone(today)) streak += 1;
   for (let i = 1; i <= 365; i++) {
     const d = new Date(cursor);
     d.setDate(d.getDate() - i);
     const iso = d.toISOString().slice(0, 10);
-    const day = checks[iso] || {};
-    if (!goals.every((g) => day[g.id])) break;
-    streak += 1;
+    if (allDone(iso)) { streak += 1; continue; }
+    const wk = isoWeek(d);
+    if (!restUsedByWeek.has(wk)) { restUsedByWeek.add(wk); continue; }
+    break;
   }
   return streak;
 }

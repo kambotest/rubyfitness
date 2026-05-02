@@ -6,6 +6,8 @@ import {
 import { parseAppleHealthExport, mergeAppleHealthIntoState } from '../utils/healthSync.js';
 import { permissionState, requestPermission } from '../utils/notifications.js';
 import MicField from './MicField.jsx';
+import CustomFoodEditor from './CustomFoodEditor.jsx';
+import { useUndo } from './UndoToast.jsx';
 
 export default function Settings({ state, setState }) {
   const [draft, setDraft] = useState({
@@ -75,6 +77,30 @@ export default function Settings({ state, setState }) {
   };
   const setNotifQuiet = (k, v) => {
     setState((s) => ({ ...s, notifications: { ...(s.notifications || {}), [k]: v } }));
+  };
+
+  // ---- Custom foods management ----
+  const [editingCustom, setEditingCustom] = useState(null); // food being edited or null
+  const { offerUndo } = useUndo();
+  const customFoods = state.customFoods || [];
+
+  const removeCustomFood = (id) => {
+    let removed;
+    setState((s) => {
+      removed = (s.customFoods || []).find((f) => f.id === id);
+      return { ...s, customFoods: (s.customFoods || []).filter((f) => f.id !== id) };
+    });
+    if (removed) offerUndo(`Removed "${removed.name}"`, () => {
+      setState((s) => ({ ...s, customFoods: [...(s.customFoods || []), removed] }));
+    });
+  };
+
+  const updateCustomFood = (food) => {
+    setState((s) => ({
+      ...s,
+      customFoods: (s.customFoods || []).map((f) => (f.id === food.id ? food : f)),
+    }));
+    setEditingCustom(null);
   };
 
   const exportData = () => {
@@ -296,11 +322,51 @@ export default function Settings({ state, setState }) {
         )}
       </section>
 
+      <section className="card p-5 space-y-3">
+        <div className="flex items-center justify-between">
+          <h2 className="font-display text-lg">Your custom foods</h2>
+          <span className="text-xs text-muted">{customFoods.length} saved</span>
+        </div>
+        {customFoods.length === 0 ? (
+          <p className="text-sm text-muted">
+            Foods you add via the <strong>+ Custom</strong> button on Today (or from the unknown-item picker)
+            appear here. Tap a row to edit, swipe-style × to delete.
+          </p>
+        ) : (
+          <ul className="divide-y divide-stone">
+            {customFoods.map((f) => (
+              <li key={f.id} className="py-2.5 flex items-center gap-2">
+                <button onClick={() => setEditingCustom(f)}
+                  className="flex-1 text-left min-w-0 px-1 py-1 rounded-xl hover:bg-blush/30 transition">
+                  <div className="font-medium text-ink truncate">{f.name}</div>
+                  <div className="text-xs text-muted">
+                    {f.unit === 'piece'
+                      ? `${f.kcal} kcal / piece${f.pieceGrams ? ` (${f.pieceGrams} g)` : ''}`
+                      : `${f.kcal} kcal / 100 ${f.unit}${f.pieceGrams ? ` · 1 piece ≈ ${f.pieceGrams} g` : ''}`}
+                    {' · '}{f.group}
+                  </div>
+                </button>
+                <button onClick={() => removeCustomFood(f.id)} aria-label="Delete"
+                  className="text-muted hover:text-rose text-sm px-2 py-1 shrink-0">×</button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
       <div className="flex flex-wrap gap-2 justify-end">
         <button onClick={exportData} className="btn-ghost">Export data</button>
         <button onClick={clearAll} className="btn-ghost text-rose">Reset entries</button>
         <button onClick={save} className="btn-primary">Save</button>
       </div>
+
+      {editingCustom && (
+        <CustomFoodEditor
+          initialFood={editingCustom}
+          onSave={updateCustomFood}
+          onClose={() => setEditingCustom(null)}
+        />
+      )}
     </div>
   );
 }

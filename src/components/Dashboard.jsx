@@ -7,6 +7,7 @@ import UnknownItemFixer from './UnknownItemFixer.jsx';
 import EntryEditor from './EntryEditor.jsx';
 import PhotoMealCapture, { compressPhoto } from './PhotoMealCapture.jsx';
 import CustomFoodEditor from './CustomFoodEditor.jsx';
+import { useUndo } from './UndoToast.jsx';
 import {
   parseFoodTranscript, parseExerciseTranscript, classifyTranscript,
 } from '../utils/parser.js';
@@ -32,6 +33,7 @@ export default function Dashboard({ state, setState }) {
   const [photoEntry, setPhotoEntry] = useState(null);
   const [customOpen, setCustomOpen] = useState(false);
   const photoFileRef = useRef(null);
+  const { offerUndo } = useUndo();
 
   const dayFood = useMemo(
     () => state.foodEntries.filter((e) => e.date === date),
@@ -128,10 +130,26 @@ export default function Dashboard({ state, setState }) {
     if (pendingItem) setPending((p) => p.filter((x) => x._id !== pendingItem._id));
   };
 
-  const removeFood = (id) =>
-    setState((s) => ({ ...s, foodEntries: s.foodEntries.filter((e) => e.id !== id) }));
-  const removeEx = (id) =>
-    setState((s) => ({ ...s, exerciseEntries: s.exerciseEntries.filter((e) => e.id !== id) }));
+  const removeFood = (id) => {
+    let removed;
+    setState((s) => {
+      removed = s.foodEntries.find((e) => e.id === id);
+      return { ...s, foodEntries: s.foodEntries.filter((e) => e.id !== id) };
+    });
+    if (removed) offerUndo(`Removed ${removed.name}`, () => {
+      setState((s) => ({ ...s, foodEntries: [...s.foodEntries, removed] }));
+    });
+  };
+  const removeEx = (id) => {
+    let removed;
+    setState((s) => {
+      removed = s.exerciseEntries.find((e) => e.id === id);
+      return { ...s, exerciseEntries: s.exerciseEntries.filter((e) => e.id !== id) };
+    });
+    if (removed) offerUndo(`Removed ${removed.name}`, () => {
+      setState((s) => ({ ...s, exerciseEntries: [...s.exerciseEntries, removed] }));
+    });
+  };
 
   const updateFood = (updated) => {
     setState((s) => ({
@@ -409,13 +427,13 @@ function Header({ state, date, setDate }) {
   return (
     <div className="flex items-end justify-between gap-4">
       <div>
-        <p className="text-xs uppercase tracking-widest text-muted">{prettyDate(date)}</p>
-        <h1 className="font-display text-3xl sm:text-4xl text-ink leading-tight">
+        <p className="text-[10px] uppercase tracking-[0.18em] text-muted mb-0.5">{prettyDate(date)}</p>
+        <h1 className="font-display text-3xl text-ink leading-tight">
           {state.profile.name ? `${state.profile.name}'s log` : "Today's log"}
         </h1>
       </div>
       <input type="date" value={date} onChange={(e)=>setDate(e.target.value)}
-        className="bg-white/70 border border-sand rounded-xl px-3 py-2 text-sm" />
+        className="bg-white border border-stone rounded-xl px-3 py-2 text-sm" />
     </div>
   );
 }

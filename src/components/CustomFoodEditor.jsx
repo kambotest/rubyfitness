@@ -30,21 +30,30 @@ const GROUPS = [
   { id: 'mixed',     label: 'Mixed / prepared meal' },
 ];
 
-export default function CustomFoodEditor({ initialName = '', onSave, onSaveAndLog, onClose }) {
-  const [name, setName] = useState(initialName);
-  const [mode, setMode] = useState('per100');     // 'per100' | 'piece'
-  const [unit, setUnit] = useState('g');          // for per100
-  const [pieceGrams, setPieceGrams] = useState('');
-  const [group, setGroup] = useState('mixed');
-  const [k, setK] = useState({ kcal: '', protein: '', carbs: '', fat: '', fiber: '', sugars: '' });
+export default function CustomFoodEditor({ initialName = '', initialFood = null, onSave, onSaveAndLog, onClose }) {
+  // Editing an existing custom food: pre-fill state from it.
+  const [name, setName] = useState(initialFood?.name || initialName);
+  const [mode, setMode] = useState(initialFood ? (initialFood.unit === 'piece' ? 'piece' : 'per100') : 'per100');
+  const [unit, setUnit] = useState(initialFood?.unit === 'ml' ? 'ml' : 'g');
+  const [pieceGrams, setPieceGrams] = useState(initialFood?.pieceGrams != null ? String(initialFood.pieceGrams) : '');
+  const [group, setGroup] = useState(initialFood?.group || 'mixed');
+  const [k, setK] = useState({
+    kcal:    initialFood?.kcal    != null ? String(initialFood.kcal)    : '',
+    protein: initialFood?.protein != null ? String(initialFood.protein) : '',
+    carbs:   initialFood?.carbs   != null ? String(initialFood.carbs)   : '',
+    fat:     initialFood?.fat     != null ? String(initialFood.fat)     : '',
+    fiber:   initialFood?.fiber   != null ? String(initialFood.fiber)   : '',
+    sugars:  initialFood?.sugars  != null ? String(initialFood.sugars)  : '',
+  });
   const setNum = (key) => (e) => setK({ ...k, [key]: e.target.value });
+  const isEditing = !!initialFood;
 
   const valid = name.trim() && Number.isFinite(parseFloat(k.kcal));
 
   const buildFood = () => {
     const n = (v) => Math.max(0, parseFloat(v) || 0);
     const base = {
-      id: 'custom_' + newId(),
+      id: initialFood?.id || ('custom_' + newId()),
       name: name.trim(),
       aliases: [name.trim().toLowerCase()],
       group,
@@ -79,8 +88,8 @@ export default function CustomFoodEditor({ initialName = '', onSave, onSaveAndLo
            onClick={(e) => e.stopPropagation()}>
         <div className="flex items-start justify-between gap-3 mb-3">
           <div>
-            <p className="text-[10px] uppercase tracking-widest text-muted">New food</p>
-            <h3 className="font-display text-lg leading-tight">Add a custom food</h3>
+            <p className="text-[10px] uppercase tracking-widest text-muted">{isEditing ? 'Edit food' : 'New food'}</p>
+            <h3 className="font-display text-lg leading-tight">{isEditing ? name : 'Add a custom food'}</h3>
           </div>
           <button onClick={onClose} className="text-muted hover:text-charcoal text-sm" aria-label="Close">×</button>
         </div>
@@ -132,9 +141,11 @@ export default function CustomFoodEditor({ initialName = '', onSave, onSaveAndLo
         <div className="flex flex-wrap items-center justify-end gap-2 mt-3">
           <button onClick={onClose} className="btn-ghost text-sm">Cancel</button>
           <button onClick={() => valid && onSave?.(buildFood())} disabled={!valid}
-            className="btn-soft text-sm">Save only</button>
-          <button onClick={() => valid && onSaveAndLog?.(buildFood())} disabled={!valid}
-            className="btn-primary text-sm">Save + log today</button>
+            className="btn-soft text-sm">{isEditing ? 'Save changes' : 'Save only'}</button>
+          {!isEditing && (
+            <button onClick={() => valid && onSaveAndLog?.(buildFood())} disabled={!valid}
+              className="btn-primary text-sm">Save + log today</button>
+          )}
         </div>
         {!valid && <p className="text-[11px] text-rose mt-2 text-right">Name and kcal are required.</p>}
       </div>
