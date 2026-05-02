@@ -11,47 +11,64 @@ html, body, #root {
 }
 
 body {
-  /* One subtle wash, not three — keeps the canvas reading as warm
-     off-white without feeling decorative. */
-  @apply bg-canvas text-ink font-sans antialiased;
+  /* Quiet warm canvas. One faint top-right wash, no other decoration. */
+  @apply bg-canvas text-ink antialiased;
+  font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  font-size: 14.5px;
+  line-height: 1.45;
   background-image:
-    radial-gradient(1100px 600px at 100% -10%, rgba(245,218,215,0.18), transparent 65%);
+    radial-gradient(1200px 700px at 100% -20%, rgba(245,218,215,0.16), transparent 70%);
   background-attachment: fixed;
+  letter-spacing: 0;
 }
 
+/* Display type: Fraunces ONLY for the brand wordmark and h1 page titles.
+   Everything else stays in Inter for crispness. */
 .font-display {
   font-family: 'Fraunces', ui-serif, Georgia, serif;
-  font-weight: 400;
-  letter-spacing: -0.012em;
+  font-weight: 500;
+  letter-spacing: -0.02em;
 }
 
-/* Cards: thin border, no blur, light shadow only on hover/active. */
+h1, h2, h3, h4 { font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; font-weight: 600; letter-spacing: -0.01em; }
+
+/* Cards: solid white surface, 1 px hairline, NO shadow, NO blur, small radius. */
 .card {
-  @apply bg-white/90 rounded-2xl border border-stone;
+  @apply bg-white rounded-lg border border-stone;
 }
 
+/* A subtler "inset" card for nested groupings (used inside another card). */
+.card-inset {
+  @apply bg-canvas rounded-md border border-stone;
+}
+
+/* Chips: rectangular-ish pills with hairline border, single neutral fill. */
 .chip {
-  @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-linen text-charcoal border border-stone;
+  @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium bg-linen text-charcoal border border-stone;
 }
 
 .btn {
-  @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition active:scale-[.98];
+  @apply inline-flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-md text-[13px] font-medium transition active:scale-[.98];
 }
 .btn-primary { @apply btn bg-dusty text-canvas hover:bg-[#bd848b]; }
-.btn-soft   { @apply btn bg-blush text-charcoal hover:bg-[#eecbc6]; }
-.btn-ghost  { @apply btn text-charcoal hover:bg-blush/50; }
-.btn-outline { @apply btn bg-transparent border border-stone text-charcoal hover:bg-linen; }
+.btn-soft   { @apply btn bg-blush text-charcoal hover:bg-[#eecbc6] border border-rose/30; }
+.btn-ghost  { @apply btn text-charcoal hover:bg-linen; }
+.btn-outline { @apply btn bg-white border border-stone text-charcoal hover:border-mushroom; }
 
 .input {
-  @apply w-full bg-white border border-stone rounded-xl px-3.5 py-2.5 text-ink placeholder:text-muted
-         focus:outline-none focus:border-dusty focus:ring-1 focus:ring-dusty/40;
+  @apply w-full bg-white border border-stone rounded-md px-3 py-2 text-[14px] text-ink placeholder:text-muted
+         focus:outline-none focus:border-dusty focus:ring-1 focus:ring-dusty/30;
 }
 
-::-webkit-scrollbar { width: 10px; height: 10px; }
+/* Hairline divider helper — replaces decorative cards in lists. */
+.divide-hair > * + * { border-top: 1px solid #E5E1D8; }
+
+/* Scrollbar — barely visible */
+::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-thumb { background: #E5E1D8; border-radius: 999px; }
 ::-webkit-scrollbar-thumb:hover { background: #B6AEA0; }
 
-/* Mic pulse */
+/* Mic pulse — warm dusty */
 @keyframes pulse-ring {
   0%   { box-shadow: 0 0 0 0 rgba(201,144,151,0.55); }
   80%  { box-shadow: 0 0 0 18px rgba(201,144,151,0); }
@@ -60,10 +77,10 @@ body {
 .recording { animation: pulse-ring 1.5s infinite; }
 
 @keyframes fade-up {
-  from { opacity: 0; transform: translateY(6px); }
+  from { opacity: 0; transform: translateY(4px); }
   to   { opacity: 1; transform: translateY(0); }
 }
-.fade-up { animation: fade-up .3s ease-out both; }
+.fade-up { animation: fade-up .25s ease-out both; }
 
 @keyframes confetti-fall {
   0%   { transform: translate3d(0, -10vh, 0) rotate(0deg);   opacity: 1; }
@@ -74,7 +91,7 @@ body {
   top: 0;
   width: 8px;
   height: 14px;
-  border-radius: 2px;
+  border-radius: 1px;
   animation-name: confetti-fall;
   animation-timing-function: cubic-bezier(.2,.6,.4,1);
   animation-fill-mode: forwards;
@@ -105,6 +122,3 @@ body {
   background: rgba(42, 40, 35, 0.42);
   backdrop-filter: blur(6px);
 }
-
-/* Section dividers — McMaster-style hairline */
-.divide-hair > * + * { border-top: 1px solid #E5E1D8; }
