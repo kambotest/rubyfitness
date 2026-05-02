@@ -85,8 +85,8 @@ export default function VoiceInput({
             type="button"
             onClick={listening ? stop : start}
             aria-label={listening ? 'Stop recording' : 'Start recording'}
-            className={`shrink-0 w-14 h-14 rounded-full flex items-center justify-center text-cream
-              ${listening ? 'bg-rose recording' : 'bg-moss hover:bg-[#4f6249]'}`}
+            className={`shrink-0 w-12 h-12 rounded-full flex items-center justify-center text-canvas
+              ${listening ? 'bg-rose recording' : 'bg-dusty hover:bg-[#bd848b]'}`}
           >
             <MicIcon />
           </button>

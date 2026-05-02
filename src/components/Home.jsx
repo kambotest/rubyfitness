@@ -149,7 +149,7 @@ export default function Home({ state, setState }) {
       <header className="flex items-end justify-between gap-4">
         <div>
           <p className="text-xs uppercase tracking-[0.18em] text-muted mb-0.5">{prettyDate(date)}</p>
-          <h1 className="font-display text-3xl sm:text-4xl text-ink leading-tight">
+          <h1 className="brand-mark text-3xl sm:text-4xl text-ink leading-tight">
             <span className="text-charcoal">Built</span><span className="text-dusty">Different</span>
           </h1>
           {state.profile.name && (
