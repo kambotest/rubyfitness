@@ -120,8 +120,12 @@ export function splitItems(text) {
   // Map digits with fractions like "1/2"
   t = t.replace(/(\d+)\s*\/\s*2/g, (_, n) => ` ${parseInt(n)/2} `);
   t = t.replace(/(\d+)\s*\/\s*4/g, (_, n) => ` ${parseInt(n)/4} `);
-  // Normalise punctuation
-  t = t.replace(/[,;\.]/g, ' and ');
+  // Normalise punctuation — but DON'T touch periods sitting between
+  // digits (otherwise "0.5 cup" splits into "0" + "5 cup"). Same for
+  // commas used as European-style decimal separators (rare but worth
+  // guarding against, e.g. "0,5 cup").
+  t = t.replace(/(?<!\d)[,;](?!\d)/g, ' and ');
+  t = t.replace(/(?<!\d)\.(?!\d)/g, ' and ');
   t = t.replace(/\s+plus\s+/g, ' and ');
   t = t.replace(/\s+with\s+/g, ' and ');
   t = t.replace(/\s+then\s+/g, ' and ');
@@ -149,6 +153,16 @@ export function parseFoodItem(raw) {
   } else {
     const m = tokens[0].match(/^(\d+(?:\.\d+)?)(g|kg|ml|l)$/i);
     if (m) { count = parseFloat(m[1]); unit = m[2].toLowerCase(); if (unit === 'kg') count *= 1000; if (unit === 'l') count *= 1000; unit = unit === 'kg' ? 'g' : unit === 'l' ? 'ml' : unit; i = 1; }
+  }
+
+  // English idiom: "half a cup", "a quarter of a cup". After the count
+  // is parsed, skip a leading "a" / "an" if it sits in front of a unit
+  // word — otherwise the article is consumed as part of the food name
+  // and the unit is dropped, e.g. "half a cup of milk" was being read
+  // as "half" + (no unit) + "a cup of milk" -> 50 ml of milk instead of
+  // 122 ml.
+  if (i > 0 && (tokens[i] === 'a' || tokens[i] === 'an') && tokens[i + 1] && UNITS[tokens[i + 1]]) {
+    i += 1;
   }
 
   if (!unit && tokens[i] && UNITS[tokens[i]]) {
