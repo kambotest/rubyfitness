@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import {
   bmr, tdee, lactationKcal, weightLossDeficit, dailyCalorieTarget,
-  macroTargets, todayISO,
+  macroTargets, todayISO, emptyState,
 } from '../utils/storage.js';
 import { parseAppleHealthExport, mergeAppleHealthIntoState } from '../utils/healthSync.js';
 import { permissionState, requestPermission } from '../utils/notifications.js';
@@ -114,6 +114,20 @@ export default function Settings({ state, setState }) {
   const clearAll = () => {
     if (!confirm('Reset all entries, recipes and weights? Your goals & profile stay.')) return;
     setState({ ...state, foodEntries: [], exerciseEntries: [], recipes: [], weights: [] });
+  };
+
+  const factoryReset = () => {
+    const ok = confirm(
+      "Wipe ALL data and start fresh?\n\n"
+      + "This deletes your profile, weight, goals, food log, recipes, "
+      + "custom foods, favourites, hydration history, daily checks, and "
+      + "settings. You can undo for 4 seconds after.\n\n"
+      + "Continue?"
+    );
+    if (!ok) return;
+    const snapshot = state;
+    setState(emptyState());
+    offerUndo('All data cleared', () => setState(snapshot));
   };
 
   return (
@@ -359,6 +373,19 @@ export default function Settings({ state, setState }) {
         <button onClick={clearAll} className="btn-ghost text-rose">Reset entries</button>
         <button onClick={save} className="btn-primary">Save</button>
       </div>
+
+      <section className="card p-5 border-rose/30">
+        <h2 className="font-display text-base text-rose mb-1">Danger zone</h2>
+        <p className="text-xs text-muted mb-3">
+          Wipes everything: profile, weight, goals, food log, recipes, custom foods, favourites,
+          hydration history, daily checks, notification settings — back to a brand-new install.
+          You'll get a 4-second undo afterwards if you change your mind.
+        </p>
+        <button onClick={factoryReset}
+          className="btn bg-rose text-canvas hover:bg-[#cf9994] text-sm">
+          Clear all data
+        </button>
+      </section>
 
       {editingCustom && (
         <CustomFoodEditor

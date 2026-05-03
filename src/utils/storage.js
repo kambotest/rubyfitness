@@ -1,9 +1,11 @@
 // Lightweight localStorage store. Single JSON blob keyed by date for entries.
 // Storage key is intentionally retained as the original 'cradle:v1' so that
-// existing user data survives the rebrand to "Built Different 🤍".
+// existing user data survives the rebrand to "Built Different".
 const KEY = 'cradle:v1';
 
-const empty = () => ({
+// The fresh-install shape. Exported so the Settings "Clear all data"
+// action can reset the app to a brand-new state.
+export const emptyState = () => ({
   profile: {
     name: '',
     weightKg: 72,
@@ -71,9 +73,9 @@ const empty = () => ({
 export function load() {
   try {
     const raw = localStorage.getItem(KEY);
-    if (!raw) return empty();
+    if (!raw) return emptyState();
     const parsed = JSON.parse(raw);
-    const base = empty();
+    const base = emptyState();
     return {
       ...base,
       ...parsed,
@@ -94,7 +96,7 @@ export function load() {
       weeklyCheckIn: { ...base.weeklyCheckIn, ...(parsed.weeklyCheckIn || {}) },
     };
   } catch {
-    return empty();
+    return emptyState();
   }
 }
 
