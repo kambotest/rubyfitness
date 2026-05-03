@@ -290,16 +290,44 @@ function matchBrandFood(phrase) {
     const b = (f.brand || '').toLowerCase().replace(/[^a-z0-9]/g, '');
     if (b.length >= 4 && qFlat.includes(b)) brandMatches.push(f);
   }
-  if (brandMatches.length === 1) return brandMatches[0];
+  // Helper: count query tokens (excluding tokens that come from the
+  // brand name itself) that appear in the food's name/variant/aliases.
+  const productOverlap = (f) => {
+    const brandTokens = new Set((f.brand || '').toLowerCase().split(/\s+/).filter(Boolean));
+    const text = [f.name, f.variant, ...(f.aliases || [])].filter(Boolean).join(' ').toLowerCase();
+    return tokens.filter((t) => t.length >= 3 && !brandTokens.has(t) && text.includes(t)).length;
+  };
+  // What's left of the query after the brand tokens are removed?
+  const nonBrandTokenCount = (f) => {
+    const brandTokens = new Set((f.brand || '').toLowerCase().split(/\s+/).filter(Boolean));
+    return tokens.filter((t) => t.length >= 3 && !brandTokens.has(t)).length;
+  };
+
+  if (brandMatches.length === 1) {
+    const only = brandMatches[0];
+    // Bare-brand query (e.g. "Woolworths") → accept the single product.
+    if (nonBrandTokenCount(only) === 0) return only;
+    // Otherwise the user named a specific item; require at least one
+    // non-brand token to overlap with the product. Otherwise we'd happily
+    // log "Woolworths milk" as Woolworths eggs because eggs is the only
+    // Woolworths product in the curated list.
+    if (productOverlap(only) > 0) return only;
+    return null; // mismatch — let the generic path try
+  }
   if (brandMatches.length > 1) {
-    // Disambiguate by counting query tokens that hit name/variant/alias text.
-    let best = brandMatches[0]; let bestScore = -1;
+    // Multi-product brand: pick the one with the most overlap. If the top
+    // candidate has zero overlap (user asked for a product this brand
+    // doesn't carry), fall through.
+    let best = null; let bestScore = 0;
     for (const f of brandMatches) {
-      const text = [f.name, f.variant, ...(f.aliases || [])].filter(Boolean).join(' ').toLowerCase();
-      const score = tokens.filter((t) => t.length >= 3 && text.includes(t)).length;
+      const score = productOverlap(f);
       if (score > bestScore) { best = f; bestScore = score; }
     }
-    return best;
+    if (best) return best;
+    // No candidate overlaps — if the query is essentially just the brand,
+    // return the first candidate as a best-guess.
+    if (nonBrandTokenCount(brandMatches[0]) === 0) return brandMatches[0];
+    return null;
   }
 
   // Path 2: long unambiguous alias hit.
