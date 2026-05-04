@@ -2,58 +2,122 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  color-scheme: light;
-}
-
-html, body, #root {
-  height: 100%;
-}
+:root { color-scheme: light; }
+html, body, #root { height: 100%; }
 
 body {
-  @apply bg-cream text-ink font-sans antialiased;
+  /* Warm oat-milk canvas with one faint caramel wash. */
+  @apply bg-canvas text-chocolate antialiased;
+  font-family: 'Inter Tight', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  font-size: 14.5px;
+  line-height: 1.45;
   background-image:
-    radial-gradient(900px 500px at 100% -10%, rgba(217,166,161,0.18), transparent 60%),
-    radial-gradient(700px 400px at -10% 20%, rgba(143,164,135,0.15), transparent 60%);
+    radial-gradient(1200px 700px at 100% -20%, rgba(193,154,107,0.14), transparent 70%);
   background-attachment: fixed;
+  letter-spacing: -0.005em;
 }
 
-.font-display { font-family: 'Fraunces', ui-serif, Georgia, serif; }
+/* Display + headings: Inter Tight at 600. Tighter than Inter, sleeker. */
+.font-display {
+  font-family: 'Inter Tight', ui-sans-serif, system-ui, sans-serif;
+  font-weight: 600;
+  letter-spacing: -0.022em;
+}
 
+/* The brand wordmark — Fraunces serif kept ONLY for the logotype. */
+.brand-mark {
+  font-family: 'Fraunces', ui-serif, Georgia, serif;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+}
+
+h1, h2, h3, h4 {
+  font-family: 'Inter Tight', ui-sans-serif, system-ui, sans-serif;
+  font-weight: 600;
+  letter-spacing: -0.018em;
+}
+
+/* Cards: oat-tinted white with a hairline latte border. */
 .card {
-  @apply bg-white/70 backdrop-blur rounded-3xl shadow-soft border border-white/60;
+  @apply bg-white rounded-lg border border-stone;
+}
+.card-inset {
+  @apply bg-canvas rounded-md border border-stone;
 }
 
 .chip {
-  @apply inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-sand text-plum;
+  @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-medium bg-oat text-cocoa border border-stone;
 }
 
 .btn {
-  @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl font-medium transition active:scale-[.98];
+  @apply inline-flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-md text-[13px] font-medium transition active:scale-[.98];
 }
-.btn-primary { @apply btn bg-moss text-cream hover:bg-[#4f6249]; }
-.btn-soft   { @apply btn bg-sand text-plum hover:bg-[#ead9c5]; }
-.btn-ghost  { @apply btn text-plum hover:bg-sand/60; }
+.btn-primary { @apply btn bg-caramel text-canvas hover:bg-toast; }
+.btn-soft   { @apply btn bg-blush text-cocoa hover:bg-[#ecd0b8] border border-latte; }
+.btn-ghost  { @apply btn text-cocoa hover:bg-blush/55; }
+.btn-outline { @apply btn bg-white border border-stone text-cocoa hover:border-mushroom; }
 
 .input {
-  @apply w-full bg-white/80 border border-sand rounded-2xl px-4 py-3 text-ink placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-sage/40;
+  @apply w-full bg-white border border-stone rounded-md px-3 py-2 text-[14px] text-chocolate placeholder:text-muted
+         focus:outline-none focus:border-caramel focus:ring-1 focus:ring-caramel/35;
 }
 
-/* Scrollbar */
-::-webkit-scrollbar { width: 10px; height: 10px; }
-::-webkit-scrollbar-thumb { background: #E6DCCE; border-radius: 999px; }
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-thumb { background: #E5DAC2; border-radius: 999px; }
+::-webkit-scrollbar-thumb:hover { background: #B8A38C; }
 
-/* Mic pulse */
 @keyframes pulse-ring {
-  0% { box-shadow: 0 0 0 0 rgba(143,164,135,0.55); }
-  80% { box-shadow: 0 0 0 18px rgba(143,164,135,0); }
-  100% { box-shadow: 0 0 0 0 rgba(143,164,135,0); }
+  0%   { box-shadow: 0 0 0 0 rgba(193,154,107,0.55); }
+  80%  { box-shadow: 0 0 0 18px rgba(193,154,107,0); }
+  100% { box-shadow: 0 0 0 0 rgba(193,154,107,0); }
 }
 .recording { animation: pulse-ring 1.5s infinite; }
 
-/* Subtle entrance */
 @keyframes fade-up {
-  from { opacity: 0; transform: translateY(6px); }
-  to { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
-.fade-up { animation: fade-up .35s ease-out both; }
+.fade-up { animation: fade-up .25s ease-out both; }
+
+@keyframes confetti-fall {
+  0%   { transform: translate3d(0, -10vh, 0) rotate(0deg);   opacity: 1; }
+  100% { transform: translate3d(var(--drift, 0), 110vh, 0) rotate(720deg); opacity: 0; }
+}
+.confetti {
+  position: absolute;
+  top: 0;
+  width: 8px;
+  height: 14px;
+  border-radius: 1px;
+  animation-name: confetti-fall;
+  animation-timing-function: cubic-bezier(.2,.6,.4,1);
+  animation-fill-mode: forwards;
+  will-change: transform, opacity;
+}
+
+@keyframes draw-tick { to { stroke-dashoffset: 0; } }
+.tick-draw path {
+  stroke-dasharray: 30;
+  stroke-dashoffset: 30;
+  animation: draw-tick .5s ease-out .1s forwards;
+}
+
+@keyframes pop-in {
+  0%   { transform: scale(.5); opacity: 0; }
+  60%  { transform: scale(1.06); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+.pop-in { animation: pop-in .45s cubic-bezier(.34,1.56,.64,1) both; }
+
+.celebrate-glow {
+  background:
+    radial-gradient(140px 80px at 50% 0%,    rgba(212,165,116,0.50), transparent 70%),
+    radial-gradient(180px 120px at 50% 100%, rgba(193,154,107,0.30), transparent 70%);
+}
+
+.overlay {
+  background: rgba(62, 42, 31, 0.42);
+  backdrop-filter: blur(6px);
+}
+
+.divide-hair > * + * { border-top: 1px solid #E5DAC2; }

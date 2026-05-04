@@ -1,17 +1,19 @@
-# Cradle
+# Built Different
 
-A gentle health & fitness diary for postpartum mums — voice-first, one-handed, and designed to be invisible when you don't need it.
+A health and fitness diary — voice-first, one-handed, calorie-and-macro tracking with brand-accurate Australian nutrition data.
 
-## Why
+## Features
 
-For a new mum 6 months postpartum, with a baby in arms, the bar for "open the app, log a meal" is high. Cradle makes the bar very low:
-
-- **Voice-first.** Hold the mic and say *"two eggs on toast and a flat white"*, or *"ran 5 km in 32 minutes"*. The app parses, calculates calories & macros, and logs.
-- **One-handed.** Big tap targets, bottom-anchored navigation, no nested screens.
-- **Personalised goals.** Pre-baby weight, weekly running km (e.g. 30 km), protein, fibre, and fruit/veg variety — all visible at a glance.
-- **Recipes from a link or your voice.** Dictate ingredients, paste a URL, or import on the fly. Cradle splits per-serve macros and lets you log "1 serve" with one tap.
-- **Progress that actually motivates.** Daily rings + weight, calories, running km, protein and variety streak over 7 / 30 / 90 / 180 days.
-- **Postpartum-aware.** Breastfeeding adds ~400 kcal to your daily target; "walking with the pram" and "postnatal pilates" are first-class activities.
+- **Brand-aware food search.** Curated AU dataset (Sanitarium, Chobani, Helga's, Mainland, Bega, Coca-Cola, Woolworths house, etc.) with per-100 NIP figures, plus a live lookup chain (your optional server proxy → Open Food Facts) for the long tail. Two-layer QA: each curated row is manufacturer-NIP-sourced and cross-checked at Woolworths; runtime Atwater 4-4-9 energy check flags any drift.
+- **Serving calculator.** Serving / Grams (or mL) / Pack toggle with stepper, live macro panel (kcal, protein, carbs+sugars, fat+sat, fibre, sodium), one-tap Add.
+- **Brand-aware voice.** "two Weet-Bix and a Chobani vanilla" parses each item with the right serving inference (2 biscuits = 30 g for Weet-Bix, 1 tub = 160 g for Chobani vanilla).
+- **Barcode scanner + cookbook OCR.** Native `BarcodeDetector` on Android Chrome, lazy-imported `@zxing/browser` fallback for iOS Safari. Tesseract.js (or your proxy's Google Vision endpoint) extracts ingredient lines from photographed cookbook pages.
+- **Tap-to-edit log entries.** Tap any food on the home screen to change amount, mode, meal slot — macros recompute live from the same engine used at log time.
+- **Favourites + last-serving prefill.** Star any item (curated or live) — its full nutrition data is cached locally so future opens are instant and offline. Re-opening a brand prefills the last amount and unit; everything stays adjustable.
+- **Evidence-based BMR/TDEE.** Mifflin-St Jeor BMR, FAO/WHO PAL multipliers, postpartum-safe deficit floors, configurable rate (0–0.5 kg/week). HbA1c-stable macro strategy (1.8 g/kg protein, carbs ≤ 45 % kcal) or the standard balanced split.
+- **5-ring home screen.** Calories, protein, fibre, sugar (vs cap), and distinct plant species this week (default goal: 50). Sugar ring turns rose-red when over cap.
+- **Daily Goals tab.** Editable checklist of recurring habits. Time-based goals get an inline timer button — tap to start, auto-ticks on expiry, survives app close. All-complete celebration with confetti and animated tick.
+- **Recipes.** Dictate ingredients, paste a URL, or photograph a printed recipe page. Per-serve macros, save to a recipe book, log "1 serve" with one tap.
 
 ## Run
 
@@ -30,5 +32,8 @@ Everything lives in your browser's local storage. Use **Settings → Export data
 
 - React + Vite + Tailwind CSS
 - Recharts for progress visualisations
-- Web Speech API for hands-free input
-- ~180-item food database covering all major groups, plus a postpartum-friendly exercise database with MET-based calorie burn
+- Web Speech API for voice input
+- Native BarcodeDetector + lazy-loaded @zxing/browser fallback for barcode scanning
+- Lazy-loaded Tesseract.js for cookbook OCR
+- Open Food Facts as the community-data fallback in the brand-lookup chain
+- Optional server proxy (Cloudflare Worker reference under `/server-proxy/`) for Woolworths/manufacturer NIP scraping
