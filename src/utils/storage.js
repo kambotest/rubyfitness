@@ -48,6 +48,11 @@ export const emptyState = () => ({
                               // active countdowns. Wall-clock based so they keep
                               // running while the app is closed; auto-tick the goal
                               // on expiry.
+  goalAggregations: {},       // { [iso-date]: { [goalId]: { count: 1|2, sourceDate: 'YYYY-MM-DD' } } }
+                              // count = how many extra base durations stack on top
+                              // of this day's goal because previous day(s) were
+                              // deferred. Capped at 2 (so a goal can be deferred
+                              // a maximum of two days).
   hydration: {},              // { [iso-date]: { ml: number } } — daily fluid total
   photoMeals: {},             // { [photoId]: { dataUrl, capturedAt } } pending entry
   notifications: {            // PWA Notification API config (in-page only — fires
@@ -89,6 +94,7 @@ export function load() {
       dailyGoals: parsed.dailyGoals && parsed.dailyGoals.length ? parsed.dailyGoals : base.dailyGoals,
       dailyChecks: parsed.dailyChecks || {},
       goalTimers: parsed.goalTimers || {},
+      goalAggregations: parsed.goalAggregations || {},
       hydration: parsed.hydration || {},
       photoMeals: parsed.photoMeals || {},
       notifications: { ...base.notifications, ...(parsed.notifications || {}) },

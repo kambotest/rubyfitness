@@ -2,84 +2,74 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  color-scheme: light;
-}
-
-html, body, #root {
-  height: 100%;
-}
+:root { color-scheme: light; }
+html, body, #root { height: 100%; }
 
 body {
-  /* Quiet warm canvas. One faint top-right wash, no other decoration. */
-  @apply bg-canvas text-ink antialiased;
-  font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  /* Warm oat-milk canvas with one faint caramel wash. */
+  @apply bg-canvas text-chocolate antialiased;
+  font-family: 'Inter Tight', ui-sans-serif, system-ui, -apple-system, sans-serif;
   font-size: 14.5px;
   line-height: 1.45;
   background-image:
-    radial-gradient(1200px 700px at 100% -20%, rgba(245,218,215,0.16), transparent 70%);
+    radial-gradient(1200px 700px at 100% -20%, rgba(193,154,107,0.14), transparent 70%);
   background-attachment: fixed;
-  letter-spacing: 0;
+  letter-spacing: -0.005em;
 }
 
-/* Default headings + .font-display use Inter for the new clean look. */
+/* Display + headings: Inter Tight at 600. Tighter than Inter, sleeker. */
 .font-display {
-  font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  font-family: 'Inter Tight', ui-sans-serif, system-ui, sans-serif;
   font-weight: 600;
-  letter-spacing: -0.018em;
+  letter-spacing: -0.022em;
 }
 
-/* The brand wordmark (and only the brand wordmark) keeps the Fraunces
-   serif for a distinct identity moment. */
+/* The brand wordmark — Fraunces serif kept ONLY for the logotype. */
 .brand-mark {
   font-family: 'Fraunces', ui-serif, Georgia, serif;
   font-weight: 500;
   letter-spacing: -0.02em;
 }
 
-h1, h2, h3, h4 { font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; font-weight: 600; letter-spacing: -0.01em; }
+h1, h2, h3, h4 {
+  font-family: 'Inter Tight', ui-sans-serif, system-ui, sans-serif;
+  font-weight: 600;
+  letter-spacing: -0.018em;
+}
 
-/* Cards: solid white surface, 1 px hairline, NO shadow, NO blur, small radius. */
+/* Cards: oat-tinted white with a hairline latte border. */
 .card {
   @apply bg-white rounded-lg border border-stone;
 }
-
-/* A subtler "inset" card for nested groupings (used inside another card). */
 .card-inset {
   @apply bg-canvas rounded-md border border-stone;
 }
 
-/* Chips: rectangular-ish pills with hairline border, single neutral fill. */
 .chip {
-  @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium bg-linen text-charcoal border border-stone;
+  @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-medium bg-oat text-cocoa border border-stone;
 }
 
 .btn {
   @apply inline-flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-md text-[13px] font-medium transition active:scale-[.98];
 }
-.btn-primary { @apply btn bg-dusty text-canvas hover:bg-[#bd848b]; }
-.btn-soft   { @apply btn bg-blush text-charcoal hover:bg-[#eecbc6] border border-rose/30; }
-.btn-ghost  { @apply btn text-charcoal hover:bg-linen; }
-.btn-outline { @apply btn bg-white border border-stone text-charcoal hover:border-mushroom; }
+.btn-primary { @apply btn bg-caramel text-canvas hover:bg-toast; }
+.btn-soft   { @apply btn bg-blush text-cocoa hover:bg-[#ecd0b8] border border-latte; }
+.btn-ghost  { @apply btn text-cocoa hover:bg-blush/55; }
+.btn-outline { @apply btn bg-white border border-stone text-cocoa hover:border-mushroom; }
 
 .input {
-  @apply w-full bg-white border border-stone rounded-md px-3 py-2 text-[14px] text-ink placeholder:text-muted
-         focus:outline-none focus:border-dusty focus:ring-1 focus:ring-dusty/30;
+  @apply w-full bg-white border border-stone rounded-md px-3 py-2 text-[14px] text-chocolate placeholder:text-muted
+         focus:outline-none focus:border-caramel focus:ring-1 focus:ring-caramel/35;
 }
 
-/* Hairline divider helper — replaces decorative cards in lists. */
-.divide-hair > * + * { border-top: 1px solid #E5E1D8; }
-
-/* Scrollbar — barely visible */
 ::-webkit-scrollbar { width: 8px; height: 8px; }
-::-webkit-scrollbar-thumb { background: #E5E1D8; border-radius: 999px; }
-::-webkit-scrollbar-thumb:hover { background: #B6AEA0; }
+::-webkit-scrollbar-thumb { background: #E5DAC2; border-radius: 999px; }
+::-webkit-scrollbar-thumb:hover { background: #B8A38C; }
 
-/* Mic pulse — warm dusty */
 @keyframes pulse-ring {
-  0%   { box-shadow: 0 0 0 0 rgba(201,144,151,0.55); }
-  80%  { box-shadow: 0 0 0 18px rgba(201,144,151,0); }
-  100% { box-shadow: 0 0 0 0 rgba(201,144,151,0); }
+  0%   { box-shadow: 0 0 0 0 rgba(193,154,107,0.55); }
+  80%  { box-shadow: 0 0 0 18px rgba(193,154,107,0); }
+  100% { box-shadow: 0 0 0 0 rgba(193,154,107,0); }
 }
 .recording { animation: pulse-ring 1.5s infinite; }
 
@@ -121,11 +111,13 @@ h1, h2, h3, h4 { font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; fon
 
 .celebrate-glow {
   background:
-    radial-gradient(140px 80px at 50% 0%,    rgba(245,218,215,0.55), transparent 70%),
-    radial-gradient(180px 120px at 50% 100%, rgba(229,183,179,0.32), transparent 70%);
+    radial-gradient(140px 80px at 50% 0%,    rgba(212,165,116,0.50), transparent 70%),
+    radial-gradient(180px 120px at 50% 100%, rgba(193,154,107,0.30), transparent 70%);
 }
 
 .overlay {
-  background: rgba(42, 40, 35, 0.42);
+  background: rgba(62, 42, 31, 0.42);
   backdrop-filter: blur(6px);
 }
+
+.divide-hair > * + * { border-top: 1px solid #E5DAC2; }
