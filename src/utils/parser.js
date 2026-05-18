@@ -133,52 +133,73 @@ export function splitItems(text) {
   return t.split(/\s+and\s+/).map((s) => s.trim()).filter(Boolean);
 }
 
-// Try to parse a single item like "two slices of sourdough toast" or "150g chicken".
-export function parseFoodItem(raw) {
-  const phrase = raw.replace(/\s+of\s+/, ' ').trim();
-  const tokens = phrase.split(/\s+/);
-  if (!tokens.length) return null;
+// Pull a leading quantity off a phrase. Returns { count, unit, foodName }
+// WITHOUT resolving to a food. Used by parseFoodItem and by the search
+// UI — so typing "half a cup of full cream milk" searches for
+// "full cream milk" and remembers the 0.5-cup quantity for the preview.
+export function extractQuantity(raw) {
+  const phrase = (raw || '').replace(/\s+of\s+/, ' ').trim();
+  const tokens = phrase.split(/\s+/).filter(Boolean);
+  if (!tokens.length) return { count: 1, unit: null, foodName: '' };
 
-  // 1. find a number (possibly first token) and optional unit
   let count = 1, unit = null, i = 0;
 
-  // patterns: "150g chicken", "2 slices toast", "a banana", "half a banana"
   const num = parseNumber(tokens[0]);
   if (num != null) { count = num; i = 1; }
 
-  // gram-attached number e.g. "150g", "200ml"
-  if (i === 0) {
-    const m = tokens[0].match(/^(\d+(?:\.\d+)?)(g|kg|ml|l)$/i);
-    if (m) { count = parseFloat(m[1]); unit = m[2].toLowerCase(); if (unit === 'kg') count *= 1000; if (unit === 'l') count *= 1000; unit = unit === 'kg' ? 'g' : unit === 'l' ? 'ml' : unit; i = 1; }
-  } else {
-    const m = tokens[0].match(/^(\d+(?:\.\d+)?)(g|kg|ml|l)$/i);
-    if (m) { count = parseFloat(m[1]); unit = m[2].toLowerCase(); if (unit === 'kg') count *= 1000; if (unit === 'l') count *= 1000; unit = unit === 'kg' ? 'g' : unit === 'l' ? 'ml' : unit; i = 1; }
+  // gram/ml-attached number e.g. "150g", "200ml", "1kg"
+  const gm = tokens[0].match(/^(\d+(?:\.\d+)?)(g|kg|ml|l)$/i);
+  if (gm) {
+    count = parseFloat(gm[1]);
+    let u = gm[2].toLowerCase();
+    if (u === 'kg') count *= 1000;
+    if (u === 'l')  count *= 1000;
+    unit = u === 'kg' ? 'g' : u === 'l' ? 'ml' : u;
+    i = 1;
   }
 
-  // English idiom: "half a cup", "a quarter of a cup". After the count
-  // is parsed, skip a leading "a" / "an" if it sits in front of a unit
-  // word — otherwise the article is consumed as part of the food name
-  // and the unit is dropped, e.g. "half a cup of milk" was being read
-  // as "half" + (no unit) + "a cup of milk" -> 50 ml of milk instead of
-  // 122 ml.
+  // English idiom "half a cup": skip "a"/"an" between count and unit.
   if (i > 0 && (tokens[i] === 'a' || tokens[i] === 'an') && tokens[i + 1] && UNITS[tokens[i + 1]]) {
     i += 1;
   }
-
   if (!unit && tokens[i] && UNITS[tokens[i]]) {
     unit = UNITS[tokens[i]];
     i += 1;
   }
 
-  // remainder is the food name
-  const foodPhrase = tokens.slice(i).join(' ').replace(/^of\s+/, '').trim();
-  if (!foodPhrase) return null;
+  const foodName = tokens.slice(i).join(' ').replace(/^of\s+/, '').trim();
+  return { count, unit, foodName: foodName || phrase };
+}
+
+// Given a resolved food + a (count, unit) quantity, compute the
+// (amount, unit) pair to store on an entry. Mirrors the resolution
+// parseFoodItem does internally.
+export function resolveAmountForFood(food, count, unit) {
+  if (!food) return { amount: count, unit: unit || 'g' };
+  if (food.unit === 'piece') {
+    if (!unit || unit === 'piece' || unit === 'serve' || unit === 'slice') return { amount: count, unit: 'piece' };
+    if (unit === 'g' || unit === 'ml') return { amount: count, unit };
+    return { amount: count, unit: 'piece' };
+  }
+  if (!unit) {
+    if (food.pieceGrams) return { amount: food.pieceGrams * count, unit: food.unit };
+    return { amount: food.per * count, unit: food.unit };
+  }
+  if (unit === 'g' || unit === 'ml') return { amount: count, unit };
+  if ((unit === 'piece' || unit === 'pieces') && food.pieceGrams) {
+    return { amount: food.pieceGrams * count, unit: food.unit };
+  }
+  const g = gramsForLooseUnit(food, unit, count);
+  return { amount: g != null ? g : food.per * count, unit: food.unit };
+}
+
+// Try to parse a single item like "two slices of sourdough toast" or "150g chicken".
+export function parseFoodItem(raw) {
+  const { count, unit, foodName } = extractQuantity(raw);
+  if (!foodName) return null;
 
   // ---- Brand-aware path ----
-  // Try the brand database first. If the top match is strong (the query
-  // contains the brand name or a multi-word product alias), interpret the
-  // quantity using the serving label and return a brand entry.
-  const brandHit = matchBrandFood(foodPhrase);
+  const brandHit = matchBrandFood(foodName);
   if (brandHit) {
     const grams = inferGramsFromVoice(brandHit, count, unit);
     if (grams && grams > 0) {
@@ -200,44 +221,10 @@ export function parseFoodItem(raw) {
     }
   }
 
-  const food = findFood(foodPhrase) || findFoodWithStrippedPrefix(foodPhrase);
-  if (!food) return { unknown: true, query: foodPhrase, raw };
+  const food = findFood(foodName) || findFoodWithStrippedPrefix(foodName);
+  if (!food) return { unknown: true, query: foodName, raw };
 
-  // resolve quantity → (amount, unit) matching the food's reference unit
-  let amount, useUnit;
-  if (food.unit === 'piece') {
-    if (!unit || unit === 'piece' || unit === 'serve' || unit === 'slice') {
-      amount = count; useUnit = 'piece';
-    } else if (unit === 'g' || unit === 'ml') {
-      amount = count; useUnit = unit;
-    } else {
-      amount = count; useUnit = 'piece';
-    }
-  } else {
-    // food expressed per 100 g/ml
-    if (!unit) {
-      if (food.pieceGrams) {
-        // bare-count of a piece-eligible food — "6 blackberries" with
-        // pieceGrams=5 -> 30 g.
-        amount = food.pieceGrams * count;
-      } else {
-        // generic bare number → assume "1 serve" of ~100 g/ml.
-        amount = food.per * count;
-      }
-      useUnit = food.unit;
-    } else if (unit === 'g' || unit === 'ml') {
-      amount = count; useUnit = unit;
-    } else if ((unit === 'piece' || unit === 'pieces') && food.pieceGrams) {
-      // explicit "6 pieces" of a piece-eligible food.
-      amount = food.pieceGrams * count;
-      useUnit = food.unit;
-    } else {
-      const g = gramsForLooseUnit(food, unit, count);
-      amount = g != null ? g : food.per * count;
-      useUnit = food.unit; // grams or ml
-    }
-  }
-
+  const { amount, unit: useUnit } = resolveAmountForFood(food, count, unit);
   const macros = nutrientsFor(food, amount, useUnit);
   return {
     foodId: food.id,

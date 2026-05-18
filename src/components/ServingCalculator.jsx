@@ -13,22 +13,27 @@ import { calcMacros, validateBrandFood } from '../utils/brandFoods.js';
 //   isFavourite  — bool, derived from state.favouriteBrands
 //   onToggleFav(id) — flips favourite state
 //   lastUsage    — { lastAmount, lastMode, count, lastDate } | null
+//   presetGrams  — when set, the calculator opens in grams/mL mode at
+//                  this amount (used when a quantity was parsed out of
+//                  the search query, e.g. "half a cup of milk").
 export default function ServingCalculator({
   food, onLog, meal = 'meal',
   isFavourite = false, onToggleFav,
-  lastUsage = null,
+  lastUsage = null, presetGrams = null,
 }) {
   const measureUnit = food.serving.unit; // 'g' or 'ml'
-  // Prefill from last usage so common foods log in 2 taps. The +/-, the
-  // input field, and the mode toggle all stay live so the user can adjust
-  // before logging.
-  const [mode, setMode] = useState(lastUsage?.lastMode || 'serving');
-  const [amount, setAmount] = useState(lastUsage?.lastAmount ?? 1);
+  // Initial state priority: parsed preset quantity > last usage > 1 serve.
+  const initialMode = presetGrams ? measureUnit : (lastUsage?.lastMode || 'serving');
+  const initialAmount = presetGrams
+    ? Math.round(presetGrams * 10) / 10
+    : (lastUsage?.lastAmount ?? 1);
+  const [mode, setMode] = useState(initialMode);
+  const [amount, setAmount] = useState(initialAmount);
 
   useEffect(() => {
-    setMode(lastUsage?.lastMode || 'serving');
-    setAmount(lastUsage?.lastAmount ?? 1);
-  }, [food.id]); // eslint-disable-line react-hooks/exhaustive-deps
+    setMode(presetGrams ? measureUnit : (lastUsage?.lastMode || 'serving'));
+    setAmount(presetGrams ? Math.round(presetGrams * 10) / 10 : (lastUsage?.lastAmount ?? 1));
+  }, [food.id, presetGrams]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const macros = useMemo(() => calcMacros(food, amount, mode), [food, amount, mode]);
   const qa = useMemo(() => validateBrandFood(food), [food]);

@@ -8,33 +8,33 @@ html, body, #root { height: 100%; }
 body {
   /* Warm oat-milk canvas with one faint caramel wash. */
   @apply bg-canvas text-chocolate antialiased;
-  font-family: 'Inter Tight', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  font-family: 'Manrope', ui-sans-serif, system-ui, -apple-system, sans-serif;
   font-size: 14.5px;
-  line-height: 1.45;
+  line-height: 1.5;
   background-image:
-    radial-gradient(1200px 700px at 100% -20%, rgba(193,154,107,0.14), transparent 70%);
+    radial-gradient(1200px 700px at 100% -20%, rgba(193,154,107,0.12), transparent 70%);
   background-attachment: fixed;
-  letter-spacing: -0.005em;
+  letter-spacing: -0.006em;
 }
 
-/* Display + headings: Inter Tight at 600. Tighter than Inter, sleeker. */
+/* Manrope everywhere — clean, minimal geometric sans. */
 .font-display {
-  font-family: 'Inter Tight', ui-sans-serif, system-ui, sans-serif;
+  font-family: 'Manrope', ui-sans-serif, system-ui, sans-serif;
   font-weight: 600;
-  letter-spacing: -0.022em;
-}
-
-/* The brand wordmark — Fraunces serif kept ONLY for the logotype. */
-.brand-mark {
-  font-family: 'Fraunces', ui-serif, Georgia, serif;
-  font-weight: 500;
   letter-spacing: -0.02em;
 }
 
+/* The brand wordmark — Manrope ExtraBold, tight, for a clean logotype. */
+.brand-mark {
+  font-family: 'Manrope', ui-sans-serif, system-ui, sans-serif;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+}
+
 h1, h2, h3, h4 {
-  font-family: 'Inter Tight', ui-sans-serif, system-ui, sans-serif;
+  font-family: 'Manrope', ui-sans-serif, system-ui, sans-serif;
   font-weight: 600;
-  letter-spacing: -0.018em;
+  letter-spacing: -0.02em;
 }
 
 /* Cards: oat-tinted white with a hairline latte border. */

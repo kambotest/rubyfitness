@@ -10,9 +10,8 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        display: ['"Inter Tight"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-        sans: ['"Inter Tight"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-        serif: ['"Fraunces"', 'ui-serif', 'Georgia', 'serif'],
+        display: ['"Manrope"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        sans: ['"Manrope"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
       },
       colors: {
         // ---- Latte / oat base ----

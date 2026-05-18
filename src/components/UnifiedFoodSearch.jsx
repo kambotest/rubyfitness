@@ -1,9 +1,13 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
-import { searchBrandFoods, findBrandFoodById, BRAND_FOODS, validateBrandFood } from '../utils/brandFoods.js';
+import { searchBrandFoods, findBrandFoodById, BRAND_FOODS, validateBrandFood, inferGramsFromVoice } from '../utils/brandFoods.js';
 import { searchFoods } from '../data/foods.js';
-import { lookupByBarcode, lookupByText } from '../utils/foodLookup.js';
+import { lookupByBarcode, lookupByText, lookupByUrl } from '../utils/foodLookup.js';
+import { extractQuantity, resolveAmountForFood } from '../utils/parser.js';
 import ServingCalculator from './ServingCalculator.jsx';
 import MicField from './MicField.jsx';
+
+// Detects a pasted URL so the field can switch into "import from link" mode.
+const URL_RE = /^(https?:\/\/|www\.)\S+$/i;
 
 const BarcodeSheet = lazy(() => import('./CameraSheet.jsx'));
 
@@ -41,13 +45,26 @@ export default function UnifiedFoodSearch({
   const [liveLoading, setLiveLoading] = useState(false);
   const [liveResults, setLiveResults] = useState([]);
   const [liveError, setLiveError] = useState('');
+  const [urlBusy, setUrlBusy] = useState(false);
+  const [urlError, setUrlError] = useState('');
   const inputRef = useRef(null);
 
-  // Merged static results: brand + generic.
+  const isUrl = URL_RE.test(query.trim());
+
+  // Intelligent input parsing — strip any leading quantity ("half a cup
+  // of full cream milk") so the SEARCH uses the food name only, while
+  // the parsed quantity is carried into the preview as a preset.
+  const parsed = useMemo(() => extractQuantity(query), [query]);
+  const searchTerm = parsed.foodName || query;
+
+  // Merged static results: brand + generic. Searches the food-name part
+  // of the query, not the raw quantity phrase.
   const staticResults = useMemo(() => {
-    if (!query || query.trim().length < 2) return [];
-    const brand = searchBrandFoods(query, 6).map((f) => ({ kind: 'brand', food: f }));
-    const generic = searchFoods(query, 6).map((f) => ({ kind: 'generic', food: f }));
+    if (isUrl) return [];
+    const term = (searchTerm || '').trim();
+    if (term.length < 2) return [];
+    const brand = searchBrandFoods(term, 6).map((f) => ({ kind: 'brand', food: f }));
+    const generic = searchFoods(term, 6).map((f) => ({ kind: 'generic', food: f }));
     // De-dupe: brand wins over generic for any equivalent name.
     const seen = new Set(brand.map((b) => b.food.name.toLowerCase()));
     const out = [...brand];
@@ -58,12 +75,12 @@ export default function UnifiedFoodSearch({
       }
     }
     return out.slice(0, 8);
-  }, [query]);
+  }, [searchTerm, isUrl]);
 
   // Live lookup only when curated/generic results are thin.
   useEffect(() => {
-    const trimmed = query.trim();
-    if (trimmed.length < 3 || staticResults.length >= 4) {
+    const trimmed = (searchTerm || '').trim();
+    if (isUrl || trimmed.length < 3 || staticResults.length >= 4) {
       setLiveResults([]); setLiveError(''); setLiveLoading(false);
       return;
     }
@@ -82,7 +99,26 @@ export default function UnifiedFoodSearch({
       }
     }, 400);
     return () => { cancelled = true; clearTimeout(handle); };
-  }, [query, staticResults.length, settings]);
+  }, [searchTerm, isUrl, staticResults.length, settings]);
+
+  // Import a product from a pasted URL.
+  const importUrl = async () => {
+    setUrlBusy(true); setUrlError('');
+    try {
+      const r = await lookupByUrl(query.trim());
+      if (r?.food) {
+        setSelected(r.food);
+      } else if (r?.reason === 'no-nutrition') {
+        setUrlError("Reached the page but couldn't find a nutrition panel. Try a product page with an on-pack NIP.");
+      } else {
+        setUrlError("Couldn't reach that link. Check the URL and try again.");
+      }
+    } catch {
+      setUrlError('Import failed. Check the URL and try again.');
+    } finally {
+      setUrlBusy(false);
+    }
+  };
 
   const recents = useMemo(() => uniqueBrandFoods(recentIds, 4, cachedBrands), [recentIds, cachedBrands]);
   const favourites = useMemo(() => uniqueBrandFoods(favouriteIds, 6, cachedBrands), [favouriteIds, cachedBrands]);
@@ -174,11 +210,30 @@ export default function UnifiedFoodSearch({
         </Section>
       )}
 
-      {!browse && (
+      {/* Pasted-URL import mode */}
+      {isUrl && !selected && (
+        <div className="mt-3 card-inset p-3">
+          <p className="text-sm text-cocoa mb-2">
+            That looks like a link. Import will fetch the page and read its nutrition panel.
+          </p>
+          <button onClick={importUrl} disabled={urlBusy} className="btn-primary text-sm">
+            {urlBusy ? 'Reading the page…' : 'Import from this link'}
+          </button>
+          {urlError && <div className="text-[11px] text-rose mt-2">{urlError}</div>}
+        </div>
+      )}
+
+      {!browse && !isUrl && (
         <div className="mt-3">
+          {parsed.count !== 1 || parsed.unit ? (
+            <p className="text-[11px] text-muted mb-1.5">
+              Searching <span className="text-cocoa font-medium">{searchTerm}</span>
+              {' · '}quantity <span className="text-cocoa font-medium">{prettyQuantity(parsed)}</span> will pre-fill the preview
+            </p>
+          ) : null}
           {allResults.length === 0 && !liveLoading ? (
             <div className="text-sm text-muted py-2">
-              No match for "<span className="text-cocoa">{query}</span>". Press the mic and dictate the full quantity to log directly.
+              No match for "<span className="text-cocoa">{searchTerm}</span>". Press the mic and dictate the full quantity to log directly.
             </div>
           ) : (
             <ResultList items={allResults} onSelect={setSelected} selectedId={selected?.id}/>
@@ -199,6 +254,7 @@ export default function UnifiedFoodSearch({
           isFavourite={favouriteIds.includes(selected.id)}
           onToggleFav={onToggleFav}
           lastUsage={brandUsage[selected.id] || null}
+          presetQuantity={isUrl ? null : { count: parsed.count, unit: parsed.unit }}
           onAccept={handleAccept}
           onClose={() => setSelected(null)}
         />
@@ -214,11 +270,18 @@ export default function UnifiedFoodSearch({
 }
 
 // Inline preview that mounts ServingCalculator (for brands) or a simple
-// generic editor (for foods that don't have a per100 panel like brands).
-function PreviewBlock({ food, meal, isFavourite, onToggleFav, lastUsage, onAccept, onClose }) {
+// generic editor. presetQuantity carries the parsed { count, unit } from
+// the search field so "half a cup of milk" lands on the preview already
+// set to 122 mL.
+function PreviewBlock({ food, meal, isFavourite, onToggleFav, lastUsage, presetQuantity, onAccept, onClose }) {
   // Brand foods have a per100 + serving + package shape.
   const isBrand = !!food.per100;
   if (isBrand) {
+    // Translate the parsed quantity into grams via the same helper the
+    // voice parser uses.
+    const presetGrams = presetQuantity
+      ? inferGramsFromVoice(food, presetQuantity.count, presetQuantity.unit)
+      : null;
     return (
       <div className="mt-3">
         <div className="flex items-center justify-between mb-2">
@@ -231,21 +294,32 @@ function PreviewBlock({ food, meal, isFavourite, onToggleFav, lastUsage, onAccep
           isFavourite={isFavourite}
           onToggleFav={onToggleFav}
           lastUsage={lastUsage}
+          presetGrams={presetGrams && presetGrams > 0 ? presetGrams : null}
           onLog={onAccept}
         />
       </div>
     );
   }
+  // Generic food: resolve the parsed quantity to an initial amount.
+  const initial = presetQuantity
+    ? resolveAmountForFood(food, presetQuantity.count, presetQuantity.unit)
+    : null;
   return (
-    <GenericPreview food={food} meal={meal} onAccept={onAccept} onClose={onClose}/>
+    <GenericPreview food={food} meal={meal}
+      initialAmount={initial ? initial.amount : null}
+      onAccept={onAccept} onClose={onClose}/>
   );
 }
 
 // Lightweight preview for generic foods — show macros at default
 // quantity, let user adjust amount, then accept.
-function GenericPreview({ food, meal, onAccept, onClose }) {
+function GenericPreview({ food, meal, initialAmount, onAccept, onClose }) {
   const isPiece = food.unit === 'piece';
-  const [amount, setAmount] = useState(isPiece ? 1 : food.per || 100);
+  const [amount, setAmount] = useState(
+    initialAmount != null && initialAmount > 0
+      ? Math.round(initialAmount * 10) / 10
+      : (isPiece ? 1 : food.per || 100)
+  );
   const macros = useMemo(() => {
     const factor = isPiece ? amount : amount / (food.per || 100);
     return {
@@ -382,6 +456,12 @@ function uniqueBrandFoods(ids, limit, cache) {
     if (f) { out.push(f); seen.add(id); if (out.length >= limit) break; }
   }
   return out;
+}
+
+function prettyQuantity({ count, unit }) {
+  if (unit === 'g' || unit === 'ml') return `${count} ${unit}`;
+  if (unit) return `${count} ${unit}${count === 1 ? '' : 's'}`;
+  return count === 1 ? '1 serve' : `${count}`;
 }
 
 function Section({ title, children }) {

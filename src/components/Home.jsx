@@ -14,12 +14,6 @@ export default function Home({ state, setState }) {
   const [date] = useState(todayISO());
   const { offerUndo } = useUndo();
 
-  const profileName = (state.profile?.name || '').trim();
-  const greeting = profileName
-    ? `Welcome back, ${profileName}.`
-    : 'Welcome back.';
-  const tagline = "Are you built different?";
-
   // Auto-classify food vs exercise from a single text/voice field.
   const submit = (text) => {
     if (!text) return;
@@ -87,11 +81,10 @@ export default function Home({ state, setState }) {
 
   return (
     <div className="space-y-5">
-      {/* Welcome banner */}
-      <header className="text-center pt-2 pb-1">
-        <p className="text-[10px] uppercase tracking-[0.22em] text-muted mb-1">{prettyDate(date)}</p>
-        <h1 className="brand-mark text-3xl sm:text-4xl text-chocolate leading-tight">{greeting}</h1>
-        <p className="font-display text-base sm:text-lg text-caramel italic mt-1">{tagline}</p>
+      {/* Brand wordmark */}
+      <header className="text-center pt-3 pb-1">
+        <h1 className="brand-mark text-4xl sm:text-5xl text-chocolate leading-none">Built Different</h1>
+        <p className="text-[10px] uppercase tracking-[0.22em] text-muted mt-2.5">{prettyDate(date)}</p>
       </header>
 
       {/* Unified log entry — voice + text, auto-classifies */}
@@ -106,7 +99,7 @@ export default function Home({ state, setState }) {
       ) : quote && (
         <section className="card p-5 sm:p-6">
           <p className="text-[10px] uppercase tracking-[0.18em] text-muted mb-2">Today</p>
-          <blockquote className="font-serif text-lg sm:text-xl text-chocolate leading-snug">
+          <blockquote className="font-display text-lg sm:text-xl text-chocolate leading-snug">
             “{quote.text}”
           </blockquote>
           <p className="text-xs text-muted mt-2">— {quote.author}</p>
