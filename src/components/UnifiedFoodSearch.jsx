@@ -176,78 +176,10 @@ export default function UnifiedFoodSearch({
         </button>
       </div>
 
-      {browse && favourites.length > 0 && (
-        <Section title="Favourites">
-          <div className="flex flex-wrap gap-1.5">
-            {favourites.map((f) => (
-              <button key={f.id} onClick={() => setSelected(f)}
-                className="chip bg-blush border border-rose/30 text-cocoa hover:bg-petal">
-                ★ {f.brand} · {f.name}
-              </button>
-            ))}
-          </div>
-        </Section>
-      )}
-
-      {browse && recents.length > 0 && (
-        <Section title="Recent">
-          <div className="flex flex-wrap gap-1.5">
-            {recents.map((f) => (
-              <button key={f.id} onClick={() => setSelected(f)}
-                className="chip hover:bg-stone">
-                {f.brand} · {f.name}
-              </button>
-            ))}
-          </div>
-        </Section>
-      )}
-
-      {browse && (
-        <Section title="Browse curated">
-          <ResultList items={BRAND_FOODS.slice(0, 6).map((f) => ({ kind: 'brand', food: f }))}
-            onSelect={setSelected} selectedId={selected?.id}/>
-          <p className="text-[11px] text-muted mt-2">{BRAND_FOODS.length} brands curated. Type to search wider.</p>
-        </Section>
-      )}
-
-      {/* Pasted-URL import mode */}
-      {isUrl && !selected && (
-        <div className="mt-3 card-inset p-3">
-          <p className="text-sm text-cocoa mb-2">
-            That looks like a link. Import will fetch the page and read its nutrition panel.
-          </p>
-          <button onClick={importUrl} disabled={urlBusy} className="btn-primary text-sm">
-            {urlBusy ? 'Reading the page…' : 'Import from this link'}
-          </button>
-          {urlError && <div className="text-[11px] text-rose mt-2">{urlError}</div>}
-        </div>
-      )}
-
-      {!browse && !isUrl && (
-        <div className="mt-3">
-          {parsed.count !== 1 || parsed.unit ? (
-            <p className="text-[11px] text-muted mb-1.5">
-              Searching <span className="text-cocoa font-medium">{searchTerm}</span>
-              {' · '}quantity <span className="text-cocoa font-medium">{prettyQuantity(parsed)}</span> will pre-fill the preview
-            </p>
-          ) : null}
-          {allResults.length === 0 && !liveLoading ? (
-            <div className="text-sm text-muted py-2">
-              No match for "<span className="text-cocoa">{searchTerm}</span>". Press the mic and dictate the full quantity to log directly.
-            </div>
-          ) : (
-            <ResultList items={allResults} onSelect={setSelected} selectedId={selected?.id}/>
-          )}
-          {liveLoading && (
-            <div className="text-[11px] text-muted mt-2 inline-flex items-center gap-2">
-              <Spinner/> Searching online…
-            </div>
-          )}
-          {liveError && <div className="text-[11px] text-rose mt-2">{liveError}</div>}
-        </div>
-      )}
-
-      {selected && (
+      {/* When a result is picked, the list collapses and the preview
+          takes its place — so a tap visibly does something and the
+          preview is never hidden below a long results list. */}
+      {selected ? (
         <PreviewBlock
           food={selected}
           meal={meal}
@@ -256,8 +188,81 @@ export default function UnifiedFoodSearch({
           lastUsage={brandUsage[selected.id] || null}
           presetQuantity={isUrl ? null : { count: parsed.count, unit: parsed.unit }}
           onAccept={handleAccept}
-          onClose={() => setSelected(null)}
+          onBack={() => setSelected(null)}
         />
+      ) : (
+        <>
+          {browse && favourites.length > 0 && (
+            <Section title="Favourites">
+              <div className="flex flex-wrap gap-1.5">
+                {favourites.map((f) => (
+                  <button key={f.id} onClick={() => setSelected(f)}
+                    className="chip bg-blush border border-rose/30 text-cocoa hover:bg-petal">
+                    ★ {f.brand} · {f.name}
+                  </button>
+                ))}
+              </div>
+            </Section>
+          )}
+
+          {browse && recents.length > 0 && (
+            <Section title="Recent">
+              <div className="flex flex-wrap gap-1.5">
+                {recents.map((f) => (
+                  <button key={f.id} onClick={() => setSelected(f)}
+                    className="chip hover:bg-stone">
+                    {f.brand} · {f.name}
+                  </button>
+                ))}
+              </div>
+            </Section>
+          )}
+
+          {browse && (
+            <Section title="Browse curated">
+              <ResultList items={BRAND_FOODS.slice(0, 6).map((f) => ({ kind: 'brand', food: f }))}
+                onSelect={setSelected}/>
+              <p className="text-[11px] text-muted mt-2">{BRAND_FOODS.length} brands curated. Type to search wider.</p>
+            </Section>
+          )}
+
+          {/* Pasted-URL import mode */}
+          {isUrl && (
+            <div className="mt-3 card-inset p-3">
+              <p className="text-sm text-cocoa mb-2">
+                That looks like a link. Import will fetch the page and read its nutrition panel.
+              </p>
+              <button onClick={importUrl} disabled={urlBusy} className="btn-primary text-sm">
+                {urlBusy ? 'Reading the page…' : 'Import from this link'}
+              </button>
+              {urlError && <div className="text-[11px] text-rose mt-2">{urlError}</div>}
+            </div>
+          )}
+
+          {!browse && !isUrl && (
+            <div className="mt-3">
+              {parsed.count !== 1 || parsed.unit ? (
+                <p className="text-[11px] text-muted mb-1.5">
+                  Searching <span className="text-cocoa font-medium">{searchTerm}</span>
+                  {' · '}quantity <span className="text-cocoa font-medium">{prettyQuantity(parsed)}</span> will pre-fill the preview
+                </p>
+              ) : null}
+              {allResults.length === 0 && !liveLoading ? (
+                <div className="text-sm text-muted py-2">
+                  No match for "<span className="text-cocoa">{searchTerm}</span>". Press the mic and dictate the full quantity to log directly.
+                </div>
+              ) : (
+                <ResultList items={allResults} onSelect={setSelected}/>
+              )}
+              {liveLoading && (
+                <div className="text-[11px] text-muted mt-2 inline-flex items-center gap-2">
+                  <Spinner/> Searching online…
+                </div>
+              )}
+              {liveError && <div className="text-[11px] text-rose mt-2">{liveError}</div>}
+            </div>
+          )}
+        </>
       )}
 
       {scanning && (
@@ -273,21 +278,25 @@ export default function UnifiedFoodSearch({
 // generic editor. presetQuantity carries the parsed { count, unit } from
 // the search field so "half a cup of milk" lands on the preview already
 // set to 122 mL.
-function PreviewBlock({ food, meal, isFavourite, onToggleFav, lastUsage, presetQuantity, onAccept, onClose }) {
+function PreviewBlock({ food, meal, isFavourite, onToggleFav, lastUsage, presetQuantity, onAccept, onBack }) {
   // Brand foods have a per100 + serving + package shape.
   const isBrand = !!food.per100;
+  const backRow = (
+    <button onClick={onBack}
+      className="inline-flex items-center gap-1 text-sm text-caramel hover:text-toast font-medium mb-2">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M15 18l-6-6 6-6"/>
+      </svg>
+      Back to results
+    </button>
+  );
   if (isBrand) {
-    // Translate the parsed quantity into grams via the same helper the
-    // voice parser uses.
     const presetGrams = presetQuantity
       ? inferGramsFromVoice(food, presetQuantity.count, presetQuantity.unit)
       : null;
     return (
       <div className="mt-3">
-        <div className="flex items-center justify-between mb-2">
-          <p className="text-[11px] uppercase tracking-wide text-muted">Preview</p>
-          <button onClick={onClose} className="text-muted hover:text-cocoa text-xs">× Close</button>
-        </div>
+        {backRow}
         <ServingCalculator
           food={food}
           meal={meal}
@@ -305,15 +314,18 @@ function PreviewBlock({ food, meal, isFavourite, onToggleFav, lastUsage, presetQ
     ? resolveAmountForFood(food, presetQuantity.count, presetQuantity.unit)
     : null;
   return (
-    <GenericPreview food={food} meal={meal}
-      initialAmount={initial ? initial.amount : null}
-      onAccept={onAccept} onClose={onClose}/>
+    <div className="mt-3">
+      {backRow}
+      <GenericPreview food={food} meal={meal}
+        initialAmount={initial ? initial.amount : null}
+        onAccept={onAccept}/>
+    </div>
   );
 }
 
 // Lightweight preview for generic foods — show macros at default
 // quantity, let user adjust amount, then accept.
-function GenericPreview({ food, meal, initialAmount, onAccept, onClose }) {
+function GenericPreview({ food, meal, initialAmount, onAccept }) {
   const isPiece = food.unit === 'piece';
   const [amount, setAmount] = useState(
     initialAmount != null && initialAmount > 0
@@ -346,17 +358,14 @@ function GenericPreview({ food, meal, initialAmount, onAccept, onClose }) {
 
   return (
     <div className="mt-3 rounded-md border border-stone bg-canvas p-4 fade-up">
-      <div className="flex items-start justify-between gap-2 mb-2">
-        <div>
-          <p className="text-[11px] uppercase tracking-wide text-muted">Preview</p>
-          <h4 className="font-display text-base text-chocolate">{food.name}</h4>
-          <p className="text-[11px] text-muted">
-            {food.unit === 'piece'
-              ? `${food.kcal} kcal / piece${food.pieceGrams ? ` (${food.pieceGrams} g)` : ''}`
-              : `${food.kcal} kcal / ${food.per} ${food.unit}`}
-          </p>
-        </div>
-        <button onClick={onClose} className="text-muted hover:text-cocoa text-xs">× Close</button>
+      <div className="mb-2">
+        <p className="text-[11px] uppercase tracking-wide text-muted">Preview</p>
+        <h4 className="font-display text-base text-chocolate">{food.name}</h4>
+        <p className="text-[11px] text-muted">
+          {food.unit === 'piece'
+            ? `${food.kcal} kcal / piece${food.pieceGrams ? ` (${food.pieceGrams} g)` : ''}`
+            : `${food.kcal} kcal / ${food.per} ${food.unit}`}
+        </p>
       </div>
 
       <div className="flex items-center gap-2">
@@ -380,8 +389,7 @@ function GenericPreview({ food, meal, initialAmount, onAccept, onClose }) {
         <Stat label="Sug" value={`${macros.sugars}g`}/>
       </div>
 
-      <div className="flex justify-end mt-3 gap-2">
-        <button onClick={onClose} className="btn-ghost text-sm">Cancel</button>
+      <div className="flex justify-end mt-3">
         <button onClick={accept} className="btn-primary text-sm">Accept + log</button>
       </div>
     </div>
@@ -397,18 +405,15 @@ function Stat({ label, value, accent }) {
   );
 }
 
-function ResultList({ items, onSelect, selectedId }) {
+function ResultList({ items, onSelect }) {
   return (
     <ul className="divide-y divide-stone">
-      {items.map(({ kind, food, source }) => {
+      {items.map(({ kind, food, source }, idx) => {
         const v = kind === 'brand' ? validateBrandFood(food) : { valid: true, warnings: [] };
-        const active = selectedId === food.id;
         return (
-          <li key={food.id}>
-            <button onClick={() => onSelect(food)}
-              className={`w-full text-left py-2.5 px-2 rounded-md flex items-center gap-2 transition ${
-                active ? 'bg-blush' : 'hover:bg-oat'
-              }`}>
+          <li key={`${food.id}_${idx}`}>
+            <button type="button" onClick={() => onSelect(food)}
+              className="w-full text-left py-3 px-2 rounded-md flex items-center gap-2 transition hover:bg-oat active:bg-blush">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   {kind === 'brand' && (

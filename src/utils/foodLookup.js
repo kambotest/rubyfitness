@@ -192,34 +192,53 @@ function parseQuantity(s) {
 
 // ---------- Import a product from a pasted URL ----------
 //
-// Fetches the page through the same public CORS proxies the recipe
-// reader uses, then extracts the Nutrition Information Panel. Two
-// strategies, first non-empty wins:
-//   1. JSON-LD Product → nutrition (schema.org NutritionInformation).
-//   2. Heuristic NIP scrape — find each nutrient label in the plain
-//      text and take the right-most number+unit (AU panels list
-//      "per serving" then "per 100 g", so the last value is per-100).
+// Most supermarket product pages are JavaScript-rendered single-page
+// apps where the Nutrition Information Panel sits behind a tab and
+// isn't in the raw HTML. So:
+//   - r.jina.ai is tried FIRST — it actually renders the page (runs
+//     the JS) and returns clean text/markdown, so tab content that's
+//     in the DOM gets captured.
+//   - Static-HTML proxies are the fallback.
+//   - For a recognised Woolworths product URL we additionally hit
+//     their public product-detail API, which returns clean JSON.
 //
-// Returns { food, source:'url' } shaped like a brand-food, or null.
+// Extraction tries, in order, until one yields a usable panel:
+//   1. JSON-LD Product → schema.org NutritionInformation.
+//   2. Embedded app-state JSON — deep-searches every <script> JSON
+//      blob for a nutrition object or an AU-format NIP string.
+//   3. Heuristic plain-text scrape — finds each nutrient label and
+//      takes the right-most number+unit (AU panels list per-serving
+//      then per-100, so the last value is per-100).
+//
+// Returns { food, source:'url' } or { food:null, reason }.
 export async function lookupByUrl(url) {
   const u = /^https?:\/\//i.test(url) ? url : `https://${url}`;
-  const proxies = [
-    (x) => `https://api.allorigins.win/raw?url=${encodeURIComponent(x)}`,
-    (x) => `https://corsproxy.io/?${encodeURIComponent(x)}`,
-    (x) => `https://r.jina.ai/${x}`,
-    (x) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(x)}`,
+
+  // Build the fetch list. r.jina.ai first (renders JS).
+  const sources = [
+    () => `https://r.jina.ai/${u}`,
+    () => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
+    () => `https://corsproxy.io/?${encodeURIComponent(u)}`,
+    () => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`,
   ];
+  // Woolworths: also try the product-detail API (clean JSON NIP).
+  const woolApi = woolworthsApiUrl(u);
+  if (woolApi) {
+    sources.unshift(() => `https://api.allorigins.win/raw?url=${encodeURIComponent(woolApi)}`);
+    sources.unshift(() => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(woolApi)}`);
+  }
+
   let reachedButEmpty = false;
-  for (const p of proxies) {
+  for (const build of sources) {
     let text;
     try {
-      const r = await fetch(p(u));
+      const r = await fetch(build());
       if (!r.ok) continue;
       text = await r.text();
     } catch {
       continue;
     }
-    if (!text || text.length < 200) continue;
+    if (!text || text.length < 80) continue;
     const food = extractFoodFromPage(text, u);
     if (food) return { food, source: 'url' };
     reachedButEmpty = true;
@@ -227,13 +246,20 @@ export async function lookupByUrl(url) {
   return reachedButEmpty ? { food: null, reason: 'no-nutrition' } : { food: null, reason: 'unreachable' };
 }
 
+function woolworthsApiUrl(url) {
+  const m = url.match(/woolworths\.com\.au\/shop\/productdetails\/(\d+)/i);
+  return m ? `https://www.woolworths.com.au/apis/ui/product/detail/${m[1]}` : null;
+}
+
 function extractFoodFromPage(text, url) {
   const fromJsonLd = extractNutritionJsonLd(text);
+  const fromEmbedded = extractEmbeddedJson(text);
   const fromNip = extractNipHeuristic(text);
-  // Merge: JSON-LD wins field-by-field, NIP fills gaps.
+  // Merge: JSON-LD > embedded JSON > heuristic, field-by-field.
   const per100 = {};
   for (const k of ['kcal', 'protein', 'carbs', 'sugars', 'fat', 'satFat', 'fiber', 'sodium']) {
     const v = (fromJsonLd?.per100?.[k] != null) ? fromJsonLd.per100[k]
+      : (fromEmbedded?.per100?.[k] != null) ? fromEmbedded.per100[k]
       : (fromNip?.per100?.[k] != null) ? fromNip.per100[k] : null;
     if (v != null) per100[k] = v;
   }
@@ -241,9 +267,9 @@ function extractFoodFromPage(text, url) {
   if (per100.kcal == null || (per100.protein == null && per100.carbs == null && per100.fat == null)) {
     return null;
   }
-  const name = fromJsonLd?.name || extractPageTitle(text) || 'Imported product';
-  const brand = fromJsonLd?.brand || hostBrand(url);
-  const servingSize = fromJsonLd?.servingSize || fromNip?.servingSize || 100;
+  const name = fromJsonLd?.name || fromEmbedded?.name || extractPageTitle(text) || 'Imported product';
+  const brand = fromJsonLd?.brand || fromEmbedded?.brand || hostBrand(url);
+  const servingSize = fromJsonLd?.servingSize || fromEmbedded?.servingSize || fromNip?.servingSize || 100;
   const unit = fromNip?.liquid ? 'ml' : 'g';
 
   return {
@@ -274,6 +300,101 @@ function extractFoodFromPage(text, url) {
       note: 'Imported from a web page — check the figures against the pack.',
     },
   };
+}
+
+// Deep-searches the page's embedded JSON (Next.js __NEXT_DATA__,
+// window.__STATE__ blobs, <script type=application/json>, or a raw
+// JSON API response) for nutrition data. This is what catches SPA
+// product pages where the NIP isn't in the static HTML.
+function extractEmbeddedJson(text) {
+  const blobs = [];
+  const trimmed = text.trim();
+  if (trimmed.startsWith('{') || trimmed.startsWith('[')) blobs.push(trimmed);
+  for (const m of text.matchAll(/<script[^>]*>([\s\S]*?)<\/script>/gi)) {
+    const body = m[1].trim();
+    if (!body || body.length > 800000) continue;
+    if (body.startsWith('{') || body.startsWith('[')) { blobs.push(body); continue; }
+    // window.__SOMETHING__ = { ... };
+    const assign = body.match(/=\s*(\{[\s\S]*\})\s*;?\s*$/);
+    if (assign) blobs.push(assign[1]);
+  }
+  for (const blob of blobs) {
+    let data;
+    try { data = JSON.parse(blob); } catch { continue; }
+    const nut = deepFindNutrition(data, 0);
+    if (nut) {
+      if (!nut.name) nut.name = deepFindName(data, 0);
+      return nut;
+    }
+  }
+  return null;
+}
+
+function deepFindNutrition(node, depth) {
+  if (node == null || depth > 9) return null;
+  if (typeof node === 'string') {
+    // An AU-format NIP serialised as a single string.
+    if (/energy/i.test(node) && /protein/i.test(node)
+        && /(kj|kcal|cal)\b/i.test(node) && node.length < 6000) {
+      const nip = extractNipHeuristic(node);
+      if (nip?.per100?.kcal != null) return { per100: nip.per100, servingSize: nip.servingSize };
+    }
+    return null;
+  }
+  if (Array.isArray(node)) {
+    for (const x of node) { const f = deepFindNutrition(x, depth + 1); if (f) return f; }
+    return null;
+  }
+  if (typeof node === 'object') {
+    const direct = nutritionFromObject(node);
+    if (direct) return direct;
+    for (const k of Object.keys(node)) {
+      const f = deepFindNutrition(node[k], depth + 1);
+      if (f) return f;
+    }
+  }
+  return null;
+}
+
+// Recognise an object that directly carries nutrient fields (schema.org
+// NutritionInformation or a plain {protein, carbs, fat, energy} shape).
+function nutritionFromObject(o) {
+  const energyRaw = o.calories ?? o.energyContent ?? o.energy ?? o.Energy ?? o.kilojoules ?? o.kJ;
+  const protein = o.proteinContent ?? o.protein ?? o.Protein;
+  const carbs   = o.carbohydrateContent ?? o.carbohydrate ?? o.carbs ?? o.Carbohydrate;
+  const fat     = o.fatContent ?? o.fat ?? o.Fat ?? o.totalFat;
+  if (energyRaw == null) return null;
+  if ([protein, carbs, fat].filter((x) => x != null).length === 0) return null;
+  let kcal = parseSchemaNum(energyRaw);
+  const energyStr = String(energyRaw).toLowerCase();
+  if (kcal != null && /kj/.test(energyStr) && !/cal/.test(energyStr)) kcal = Math.round(kcal / 4.184);
+  if (kcal == null) return null;
+  return {
+    per100: {
+      kcal,
+      protein: parseSchemaNum(protein),
+      carbs:   parseSchemaNum(carbs),
+      sugars:  parseSchemaNum(o.sugarContent ?? o.sugars ?? o.Sugars),
+      fat:     parseSchemaNum(fat),
+      satFat:  parseSchemaNum(o.saturatedFatContent ?? o.saturatedFat ?? o.satFat),
+      fiber:   parseSchemaNum(o.fiberContent ?? o.fibreContent ?? o.fiber ?? o.fibre ?? o.dietaryFibre),
+      sodium:  parseSchemaNum(o.sodiumContent ?? o.sodium ?? o.Sodium),
+    },
+    servingSize: parseQuantity(o.servingSize) || parseQuantity(o.ServingSize),
+  };
+}
+
+function deepFindName(node, depth) {
+  if (node == null || depth > 6 || typeof node !== 'object') return null;
+  for (const key of ['name', 'Name', 'displayName', 'DisplayName', 'productName', 'title', 'Description']) {
+    const v = node[key];
+    if (typeof v === 'string' && v.length >= 3 && v.length <= 90 && !/^https?:/i.test(v)) return v.trim();
+  }
+  for (const k of Object.keys(node)) {
+    const f = deepFindName(node[k], depth + 1);
+    if (f) return f;
+  }
+  return null;
 }
 
 function extractNutritionJsonLd(html) {
@@ -347,10 +468,12 @@ function extractNipHeuristic(html) {
   if (!/energy|nutrition/.test(plain)) return null;
 
   // Capture up to two "number unit" values after a label; the last is
-  // the per-100 column on a standard FSANZ panel.
+  // the per-100 column on a standard FSANZ panel. Wide gap windows so
+  // markdown tables and verbose "per serving / per 100 g" headers
+  // between the values don't break the match.
   const last = (labelAlt, unit) => {
     const re = new RegExp(
-      `(?:${labelAlt})[^\\d]{0,40}?(\\d+(?:\\.\\d+)?)\\s*${unit}\\b(?:[^\\d]{0,28}?(\\d+(?:\\.\\d+)?)\\s*${unit}\\b)?`,
+      `(?:${labelAlt})[^\\d]{0,45}?(\\d+(?:\\.\\d+)?)\\s*${unit}\\b(?:[^\\d]{0,45}?(\\d+(?:\\.\\d+)?)\\s*${unit}\\b)?`,
       'i'
     );
     const m = plain.match(re);
