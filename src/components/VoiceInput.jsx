@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 // Wraps Web Speech API. Falls back to text-only on unsupported browsers.
 export default function VoiceInput({
   onSubmit,
-  placeholder = 'Type or hold the mic — “2 eggs on toast and a coffee”',
+  placeholder = 'Type or hold the mic. e.g. "150g chicken, 1 cup rice"',
   autoSubmitOnSpeechEnd = true,
 }) {
   const [text, setText] = useState('');
@@ -85,8 +85,8 @@ export default function VoiceInput({
             type="button"
             onClick={listening ? stop : start}
             aria-label={listening ? 'Stop recording' : 'Start recording'}
-            className={`shrink-0 w-14 h-14 rounded-full flex items-center justify-center text-cream
-              ${listening ? 'bg-rose recording' : 'bg-moss hover:bg-[#4f6249]'}`}
+            className={`shrink-0 w-12 h-12 rounded-full flex items-center justify-center text-canvas
+              ${listening ? 'bg-rose recording' : 'bg-dusty hover:bg-[#bd848b]'}`}
           >
             <MicIcon />
           </button>
@@ -100,7 +100,7 @@ export default function VoiceInput({
         </button>
       </div>
       <div className="flex items-center justify-between mt-3 text-xs text-muted">
-        <div>{listening ? 'Listening… speak naturally, then tap to stop.' : supported ? 'Tap mic to dictate hands-free.' : 'Voice not supported here — type instead.'}</div>
+        <div>{listening ? 'Listening. Tap to stop.' : supported ? 'Tap mic to dictate.' : 'Voice not supported. Type instead.'}</div>
         <button onClick={() => handleSubmit()} className="sm:hidden btn-soft px-3 py-1.5 text-xs">Log</button>
       </div>
     </div>

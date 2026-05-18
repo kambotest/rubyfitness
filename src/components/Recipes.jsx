@@ -1,5 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import VoiceInput from './VoiceInput.jsx';
+import MicField from './MicField.jsx';
 import { parseFoodTranscript } from '../utils/parser.js';
 import { findFood, nutrientsFor } from '../data/foods.js';
 import { newId, todayISO } from '../utils/storage.js';
@@ -14,12 +15,12 @@ export default function Recipes({ state, setState }) {
       <div className="flex items-end justify-between">
         <div>
           <p className="text-xs uppercase tracking-widest text-muted">Recipes</p>
-          <h1 className="font-display text-3xl">Cook once, log easy</h1>
+          <h1 className="font-display text-3xl">Recipes</h1>
         </div>
         <div className="flex gap-1">
           {['new','book'].map((t) => (
             <button key={t} onClick={() => setTab(t)}
-              className={`px-3 py-1.5 rounded-full text-xs font-medium ${tab===t ? 'bg-moss text-cream' : 'bg-white/60 text-plum border border-sand'}`}>
+              className={`px-3 py-1.5 rounded-full text-xs font-medium ${tab===t ? 'bg-caramel text-canvas' : 'bg-white text-cocoa border border-stone'}`}>
               {t === 'new' ? 'New' : `Book (${state.recipes.length})`}
             </button>
           ))}
@@ -39,6 +40,10 @@ function RecipeBuilder({ state, setState }) {
   const [link, setLink] = useState('');
   const [linkBusy, setLinkBusy] = useState(false);
   const [linkError, setLinkError] = useState('');
+  const [photoBusy, setPhotoBusy] = useState(false);
+  const [photoStatus, setPhotoStatus] = useState('');
+  const [photoText, setPhotoText] = useState('');
+  const fileRef = useRef(null);
 
   const totals = useMemo(() => sumItems(items), [items]);
   const perServe = scale(totals, 1 / Math.max(1, servings));
@@ -54,18 +59,50 @@ function RecipeBuilder({ state, setState }) {
 
   const removeItem = (id) => setItems((arr) => arr.filter((x) => x.id !== id));
 
+  const handlePhoto = async (file) => {
+    if (!file) return;
+    setPhotoBusy(true); setPhotoStatus('Loading text recogniser…'); setPhotoText('');
+    try {
+      const { recogniseRecipeText, ocrToIngredientText } = await import('../utils/recipeOCR.js');
+      const raw = await recogniseRecipeText(file, {
+        proxyEndpoint: state.settings?.proxyEndpoint,
+        onProgress: (status, p) => setPhotoStatus(`${status}${p ? ' ' + Math.round(p * 100) + '%' : ''}`),
+      });
+      const cleaned = ocrToIngredientText(raw);
+      setPhotoText(cleaned || raw);
+      setPhotoStatus(cleaned ? 'Found ingredients — review and edit before adding.' : "Couldn't pick out ingredient lines. Edit the text below.");
+    } catch (e) {
+      setPhotoStatus(`Could not read the image: ${e.message || e}`);
+    } finally {
+      setPhotoBusy(false);
+    }
+  };
+
+  const usePhotoText = () => {
+    if (!photoText.trim()) return;
+    addFromText(photoText);
+    setPhotoText(''); setPhotoStatus('');
+  };
+
   const importFromLink = async () => {
     if (!link.trim()) return;
     setLinkBusy(true); setLinkError('');
     try {
-      const ingredients = await fetchRecipeIngredients(link.trim());
+      const { ingredients, diag } = await fetchRecipeIngredients(link.trim());
       if (!ingredients.length) {
-        setLinkError("Couldn't read ingredients from that link. Try pasting them in below.");
+        if (diag?.reason === 'unreachable') {
+          setLinkError("Couldn't reach that link. Check the URL or paste ingredients in below.");
+        } else if (diag?.reason === 'no-ingredients-markup') {
+          setLinkError("That page loaded but doesn't expose recipe markup. Dictate or paste ingredients below — or try the cookbook photo button.");
+        } else {
+          setLinkError("Couldn't read ingredients from that link. Try pasting them below.");
+        }
       } else {
         addFromText(ingredients.join(' and '));
+        setLink('');
       }
     } catch (e) {
-      setLinkError("Network/CORS blocked the fetch. Paste ingredients in below.");
+      setLinkError("Network blocked the fetch. Paste ingredients in below.");
     } finally {
       setLinkBusy(false);
     }
@@ -102,7 +139,7 @@ function RecipeBuilder({ state, setState }) {
     <div className="space-y-4">
       <div className="card p-5 space-y-3">
         <div className="grid sm:grid-cols-[2fr_1fr] gap-3">
-          <input value={name} onChange={(e)=>setName(e.target.value)}
+          <MicField value={name} onChange={(e)=>setName(e.target.value)}
             className="input" placeholder="Recipe name (e.g. Salmon power bowl)"/>
           <div className="flex items-center gap-2">
             <label className="text-sm text-muted">Servings</label>
@@ -119,10 +156,36 @@ function RecipeBuilder({ state, setState }) {
           </button>
         </div>
         {linkError && <p className="text-xs text-rose">{linkError}</p>}
+
+        <div className="border-t border-stone pt-3">
+          <div className="flex items-center gap-2 flex-wrap">
+            <input ref={fileRef} type="file" accept="image/*" capture="environment"
+              className="hidden"
+              onChange={(e) => handlePhoto(e.target.files?.[0])}/>
+            <button onClick={() => fileRef.current?.click()} disabled={photoBusy}
+              className="btn-soft flex items-center gap-2">
+              <CameraIcon/> {photoBusy ? 'Reading photo…' : 'Photograph recipe'}
+            </button>
+            {photoStatus && <span className="text-xs text-muted">{photoStatus}</span>}
+          </div>
+          <p className="text-[11px] text-muted mt-1">
+            Snap a printed recipe (cookbook, magazine). We'll extract the ingredient lines so you can review them before adding.
+          </p>
+          {photoText && (
+            <div className="mt-2 space-y-2">
+              <MicField as="textarea" value={photoText} onChange={(e) => setPhotoText(e.target.value)}
+                rows={4} className="input" placeholder="Edit the extracted ingredients…"/>
+              <div className="flex gap-2 justify-end">
+                <button onClick={() => { setPhotoText(''); setPhotoStatus(''); }} className="btn-ghost text-sm">Discard</button>
+                <button onClick={usePhotoText} className="btn-primary text-sm">Add as ingredients</button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       <VoiceInput
-        placeholder='Dictate ingredients — e.g. “200g chicken, 1 cup rice, 2 cups broccoli, 1 tbsp olive oil”'
+        placeholder='Dictate ingredients. e.g. "200g chicken, 1 cup rice, 2 cups broccoli, 1 tbsp olive oil"'
         onSubmit={addFromText}
       />
 
@@ -135,7 +198,7 @@ function RecipeBuilder({ state, setState }) {
         {!items.length ? (
           <div className="text-sm text-muted italic py-2">Add ingredients above to see macros per serve.</div>
         ) : (
-          <ul className="divide-y divide-sand/70">
+          <ul className="divide-y divide-stone">
             {items.map((it) => (
               <li key={it.id} className="py-2 flex items-baseline justify-between gap-3">
                 <div className="min-w-0">
@@ -151,7 +214,7 @@ function RecipeBuilder({ state, setState }) {
         )}
 
         {items.length > 0 && (
-          <div className="mt-4 pt-4 border-t border-sand">
+          <div className="mt-4 pt-4 border-t border-stone">
             <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 text-center">
               <Stat label="Per serve" value={`${perServe.kcal} kcal`} highlight />
               <Stat label="Protein" value={`${perServe.protein} g`} />
@@ -213,7 +276,7 @@ function RecipeBook({ state, setState }) {
 
 function Stat({ label, value, highlight }) {
   return (
-    <div className={`rounded-2xl py-2 ${highlight ? 'bg-moss text-cream' : 'bg-sand/60 text-plum'}`}>
+    <div className={`rounded-2xl py-2 ${highlight ? 'bg-caramel text-canvas' : 'bg-oat text-cocoa'}`}>
       <div className="font-display text-base leading-none">{value}</div>
       <div className="text-[10px] uppercase tracking-wide opacity-80">{label}</div>
     </div>
@@ -244,41 +307,152 @@ function scale(t, k) {
   };
 }
 
-// Best-effort: fetch a URL via a public read-only proxy and extract recipe ingredients
-// from JSON-LD or schema.org markup. Falls back to nothing if blocked.
+// Best-effort: fetch a URL via public CORS-friendly readers and extract
+// recipe ingredients. Strategy:
+//   1. Try multiple CORS proxies in fallback order — different proxies
+//      handle different sites (e.g. allorigins handles Cloudflare-fronted
+//      pages that r.jina.ai can refuse).
+//   2. Run every extractor on the response (HTML or Markdown). The first
+//      one to produce a non-empty list wins.
+//
+// Returns { ingredients, diag } where diag describes which proxy/strategy
+// worked or what failed, surfaced to the user as a clearer error.
 async function fetchRecipeIngredients(url) {
   const u = url.startsWith('http') ? url : `https://${url}`;
-  // Public CORS-friendly readers (best-effort; user can paste ingredients if blocked).
   const proxies = [
-    (x) => `https://r.jina.ai/${x}`,
-    (x) => `https://corsproxy.io/?${encodeURIComponent(x)}`,
+    { name: 'allorigins', build: (x) => `https://api.allorigins.win/raw?url=${encodeURIComponent(x)}` },
+    { name: 'corsproxy',  build: (x) => `https://corsproxy.io/?${encodeURIComponent(x)}` },
+    { name: 'jina',       build: (x) => `https://r.jina.ai/${x}` },
+    { name: 'codetabs',   build: (x) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(x)}` },
   ];
+
+  const reachedButEmpty = [];
   for (const p of proxies) {
+    let text;
     try {
-      const res = await fetch(p(u), { method: 'GET' });
+      const res = await fetch(p.build(u), { method: 'GET' });
       if (!res.ok) continue;
-      const text = await res.text();
-      const ings = extractIngredientsFromHtml(text);
-      if (ings.length) return ings;
-    } catch { /* try next */ }
+      text = await res.text();
+    } catch {
+      continue; // proxy unreachable
+    }
+    if (!text || text.length < 100) continue;
+    const ings = extractIngredients(text);
+    if (ings.length) return { ingredients: ings, diag: { proxy: p.name } };
+    reachedButEmpty.push(p.name);
   }
-  return [];
+  return {
+    ingredients: [],
+    diag: reachedButEmpty.length
+      ? { reached: reachedButEmpty, reason: 'no-ingredients-markup' }
+      : { reason: 'unreachable' },
+  };
 }
 
-function extractIngredientsFromHtml(html) {
-  // 1) Try JSON-LD blocks
-  const jsonLdMatches = [...html.matchAll(/<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)];
-  for (const m of jsonLdMatches) {
-    try {
-      const data = JSON.parse(m[1].trim());
-      const found = findRecipeIngredients(data);
-      if (found && found.length) return found;
-    } catch { /* skip */ }
+function extractIngredients(text) {
+  return (
+    extractFromJsonLd(text) ||
+    extractFromItemprop(text) ||
+    extractFromClassNames(text) ||
+    extractFromHtmlHeading(text) ||
+    extractFromMarkdownHeading(text) ||
+    []
+  );
+}
+
+// JSON-LD — handle multi-block scripts, @graph arrays, and the
+// occasional escaped-HTML wrapping. We strip CDATA markers and re-try
+// parsing if the first attempt fails.
+function extractFromJsonLd(html) {
+  const re = /<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
+  const blocks = [...html.matchAll(re)];
+  for (const m of blocks) {
+    let raw = m[1].trim().replace(/^\s*<!\[CDATA\[/, '').replace(/\]\]>\s*$/, '');
+    // Some sites concatenate multiple JSON objects in one script — try
+    // splitting on `}{` boundaries.
+    const candidates = [raw, ...splitConcatenatedJson(raw)];
+    for (const c of candidates) {
+      try {
+        const data = JSON.parse(c);
+        const found = findRecipeIngredients(data);
+        if (found && found.length) return found;
+      } catch { /* skip */ }
+    }
   }
-  // 2) Fallback: grab anything that looks like an ingredient list
+  return null;
+}
+function splitConcatenatedJson(s) {
+  const out = []; let depth = 0; let start = 0;
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i];
+    if (c === '{') { if (depth === 0) start = i; depth += 1; }
+    else if (c === '}') { depth -= 1; if (depth === 0) out.push(s.slice(start, i + 1)); }
+  }
+  return out;
+}
+
+function extractFromItemprop(html) {
   const liMatches = [...html.matchAll(/<li[^>]*itemprop=["']recipeIngredient["'][^>]*>([\s\S]*?)<\/li>/gi)];
   if (liMatches.length) return liMatches.map((m) => stripTags(m[1]).trim()).filter(Boolean);
-  return [];
+  return null;
+}
+
+// Class-name heuristic: many recipe blogs (WP-Recipe-Maker, Tasty, ZipList)
+// emit class names containing "ingredient" without itemprop tags.
+function extractFromClassNames(html) {
+  const re = /<(?:li|div|span)[^>]*class=["'][^"']*\b(?:wprm-recipe-ingredient|tasty-recipes-ingredients?-body|recipe-ingredient|ingredient-list-item|ingredient)[^"']*["'][^>]*>([\s\S]*?)<\/(?:li|div|span)>/gi;
+  const matches = [...html.matchAll(re)];
+  if (!matches.length) return null;
+  const out = matches
+    .map((m) => stripTags(m[1]).trim())
+    .filter((s) => s && s.length > 1 && s.length < 200 && /\d|cup|tbsp|tsp|gram|piece|whole/i.test(s));
+  // Dedupe consecutive duplicates from outer + inner wrapper matches.
+  const seen = new Set();
+  const unique = out.filter((s) => { if (seen.has(s)) return false; seen.add(s); return true; });
+  return unique.length ? unique : null;
+}
+
+// Editorial heuristic: find an "Ingredients" heading in raw HTML and
+// collect <li> items until the next heading or end-of-section.
+function extractFromHtmlHeading(html) {
+  const headingRe = /<h[1-6][^>]*>\s*ingredients?\s*<\/h[1-6]>/i;
+  const hMatch = html.match(headingRe);
+  if (!hMatch) return null;
+  const after = html.slice(hMatch.index + hMatch[0].length);
+  const stopRe = /<h[1-4][^>]*>\s*(?:method|directions|instructions|steps?|how to|notes?|preparation)/i;
+  const stopMatch = after.match(stopRe);
+  const slice = stopMatch ? after.slice(0, stopMatch.index) : after.slice(0, 12000);
+  const liMatches = [...slice.matchAll(/<li[^>]*>([\s\S]*?)<\/li>/gi)];
+  if (!liMatches.length) return null;
+  const out = liMatches.map((m) => stripTags(m[1]).trim()).filter((s) => s && s.length < 200);
+  return out.length ? out : null;
+}
+
+// Markdown heuristic: r.jina.ai returns reader-mode Markdown, not HTML.
+// Look for an "Ingredients" heading line and capture list/plain lines
+// until the next heading.
+function extractFromMarkdownHeading(text) {
+  if (!/ingredients/i.test(text)) return null;
+  const lines = text.split(/\r?\n/);
+  let inSection = false;
+  const out = [];
+  const isHeading = (l) => /^#{1,4}\s+\S/.test(l) || /^[A-Z][A-Za-z ]{1,30}$/.test(l.trim());
+  const isStop = (l) => /^(?:#{1,4}\s+)?\s*(method|directions|instructions|steps?|how to make|notes?|preparation|tips?)\b/i.test(l.trim());
+  const isStart = (l) => /^(?:#{1,4}\s+)?\s*ingredients?\s*$/i.test(l.trim());
+  for (const line of lines) {
+    if (!inSection) { if (isStart(line)) inSection = true; continue; }
+    if (isStop(line)) break;
+    if (isHeading(line) && !isStart(line)) {
+      // probably the next section; stop unless we have nothing yet
+      if (out.length) break;
+      continue;
+    }
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+    const cleaned = trimmed.replace(/^[\-•*•]\s*/, '').replace(/^\d+[\.\)]\s*/, '').trim();
+    if (cleaned && cleaned.length < 200 && /[a-z]/i.test(cleaned)) out.push(cleaned);
+  }
+  return out.length ? out : null;
 }
 
 function findRecipeIngredients(node) {
@@ -303,3 +477,13 @@ function findRecipeIngredients(node) {
 }
 
 function stripTags(s) { return s.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' '); }
+
+function CameraIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 8a2 2 0 0 1 2-2h2l2-2h6l2 2h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+      <circle cx="12" cy="13" r="3.5"/>
+    </svg>
+  );
+}

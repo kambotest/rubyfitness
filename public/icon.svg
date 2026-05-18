@@ -1,6 +1,69 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <rect width="64" height="64" rx="14" fill="#FBF7F2"/>
-  <path d="M16 38c0-9 7-16 16-16s16 7 16 16" fill="none" stroke="#5E7257" stroke-width="3" stroke-linecap="round"/>
-  <circle cx="32" cy="44" r="3.5" fill="#D9A6A1"/>
-  <path d="M22 44c2 4 6 6 10 6s8-2 10-6" fill="none" stroke="#5E7257" stroke-width="3" stroke-linecap="round"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <!-- Warm latte gradient background -->
+  <rect width="512" height="512" rx="112" fill="#F0E6D2"/>
+  <rect width="512" height="512" rx="112" fill="url(#bg)" opacity="0.85"/>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="512" y2="512" gradientUnits="userSpaceOnUse">
+      <stop offset="0%"  stop-color="#FAF6EE"/>
+      <stop offset="60%" stop-color="#F0E6D2"/>
+      <stop offset="100%" stop-color="#D4A574"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Single fluid line drawing of a mother holding a child to her chest.
+       Hair flows back, the child's head nestles into her shoulder, one
+       arm wraps around the back, the other supports the child. -->
+  <g stroke="#3E2A1F" stroke-width="11" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <!-- Mother's hair line — soft swept back -->
+    <path d="M188 138
+             Q 178 110, 196 96
+             Q 224 78, 256 88
+             Q 280 96, 286 116"/>
+
+    <!-- Mother's head — gentle oval, slightly tilted toward the child -->
+    <path d="M204 130
+             Q 198 162, 220 188
+             Q 248 206, 272 188
+             Q 290 168, 286 138
+             Q 280 116, 256 110
+             Q 220 110, 204 130 Z"/>
+
+    <!-- Mother's neck and shoulder line, leaning protectively forward -->
+    <path d="M236 200
+             Q 232 220, 220 232
+             Q 192 244, 168 268"/>
+
+    <!-- Mother's back — strong upright line that flows into a wrap -->
+    <path d="M280 198
+             Q 296 226, 304 268
+             Q 312 308, 308 348
+             Q 304 376, 286 396"/>
+
+    <!-- Mother's arm wrapping around the child's back -->
+    <path d="M280 232
+             Q 320 252, 348 282
+             Q 360 300, 354 322
+             Q 344 340, 322 342"/>
+
+    <!-- Mother's other arm supporting the child from below -->
+    <path d="M218 268
+             Q 200 296, 210 326
+             Q 224 348, 252 354"/>
+
+    <!-- Child's head — round, tucked against the mother's chest -->
+    <circle cx="298" cy="290" r="32"/>
+
+    <!-- Child's body suggested as a curve held within the wrap -->
+    <path d="M276 318
+             Q 296 342, 322 332"/>
+
+    <!-- Subtle wrap/sling line across the mother's torso -->
+    <path d="M232 244
+             Q 270 248, 318 268"
+       stroke-width="7" opacity="0.55"/>
+  </g>
+
+  <!-- Faint ground line — barely there, suggests stillness -->
+  <path d="M140 442 L 372 442"
+        stroke="#3E2A1F" stroke-width="5" stroke-linecap="round" opacity="0.16"/>
 </svg>
